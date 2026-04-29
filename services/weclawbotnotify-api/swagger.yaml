@@ -29,13 +29,6 @@ paths:
                 example: 0
                 type: integer
               data:
-                properties:
-                  code:
-                    description: 响应码
-                    type: integer
-                  msg:
-                    description: 响应消息
-                    type: string
                 type: object
               msg:
                 description: business message
@@ -82,32 +75,17 @@ paths:
                 type: integer
               data:
                 properties:
-                  code:
-                    description: 响应码
+                  created_at:
+                    description: 创建时间
+                    type: string
+                  id:
+                    description: 应用 ID
                     type: integer
-                  data:
-                    description: 应用数据
-                    properties:
-                      created_at:
-                        description: 创建时间
-                        type: string
-                      id:
-                        description: 应用 ID
-                        type: integer
-                      name:
-                        description: 应用名称
-                        type: string
-                      token:
-                        description: 应用 Token（用于推送鉴权）
-                        type: string
-                    required:
-                    - id
-                    - token
-                    - name
-                    - created_at
-                    type: object
-                  msg:
-                    description: 响应消息
+                  name:
+                    description: 应用名称
+                    type: string
+                  token:
+                    description: 应用 Token（用于推送鉴权）
                     type: string
                 type: object
               msg:
@@ -138,10 +116,7 @@ paths:
                 type: integer
               data:
                 properties:
-                  code:
-                    description: 响应码
-                    type: integer
-                  data:
+                  list:
                     description: 应用列表
                     items:
                       properties:
@@ -167,9 +142,6 @@ paths:
                       - created_at
                       type: object
                     type: array
-                  msg:
-                    description: 响应消息
-                    type: string
                 type: object
               msg:
                 description: business message
@@ -217,39 +189,26 @@ paths:
                 type: integer
               data:
                 properties:
-                  code:
-                    description: 响应码
-                    type: integer
-                  data:
-                    description: 登录数据
-                    properties:
-                      token:
-                        description: JWT 令牌
-                        type: string
-                      user:
-                        description: 用户信息
-                        properties:
-                          created_at:
-                            description: 创建时间
-                            type: string
-                          id:
-                            description: 用户 ID
-                            type: integer
-                          username:
-                            description: 用户名
-                            type: string
-                        required:
-                        - id
-                        - username
-                        - created_at
-                        type: object
-                    required:
-                    - token
-                    - user
-                    type: object
-                  msg:
-                    description: 响应消息
+                  token:
+                    description: JWT 令牌
                     type: string
+                  user:
+                    description: 用户信息
+                    properties:
+                      created_at:
+                        description: 创建时间
+                        type: string
+                      id:
+                        description: 用户 ID
+                        type: integer
+                      username:
+                        description: 用户名
+                        type: string
+                    required:
+                    - id
+                    - username
+                    - created_at
+                    type: object
                 type: object
               msg:
                 description: business message
@@ -295,39 +254,26 @@ paths:
                 type: integer
               data:
                 properties:
-                  code:
-                    description: 响应码
-                    type: integer
-                  data:
-                    description: 登录数据
-                    properties:
-                      token:
-                        description: JWT 令牌
-                        type: string
-                      user:
-                        description: 用户信息
-                        properties:
-                          created_at:
-                            description: 创建时间
-                            type: string
-                          id:
-                            description: 用户 ID
-                            type: integer
-                          username:
-                            description: 用户名
-                            type: string
-                        required:
-                        - id
-                        - username
-                        - created_at
-                        type: object
-                    required:
-                    - token
-                    - user
-                    type: object
-                  msg:
-                    description: 响应消息
+                  token:
+                    description: JWT 令牌
                     type: string
+                  user:
+                    description: 用户信息
+                    properties:
+                      created_at:
+                        description: 创建时间
+                        type: string
+                      id:
+                        description: 用户 ID
+                        type: integer
+                      username:
+                        description: 用户名
+                        type: string
+                    required:
+                    - id
+                    - username
+                    - created_at
+                    type: object
                 type: object
               msg:
                 description: business message
@@ -362,13 +308,6 @@ paths:
                 example: 0
                 type: integer
               data:
-                properties:
-                  code:
-                    description: 响应码
-                    type: integer
-                  msg:
-                    description: 响应消息
-                    type: string
                 type: object
               msg:
                 description: business message
@@ -412,24 +351,11 @@ paths:
                 type: integer
               data:
                 properties:
-                  code:
-                    description: 响应码
+                  client_id:
+                    description: 客户端 ID
                     type: integer
-                  data:
-                    description: 二维码数据
-                    properties:
-                      client_id:
-                        description: 客户端 ID
-                        type: integer
-                      qrcode_url:
-                        description: 二维码链接
-                        type: string
-                    required:
-                    - client_id
-                    - qrcode_url
-                    type: object
-                  msg:
-                    description: 响应消息
+                  qrcode_url:
+                    description: 二维码链接
                     type: string
                 type: object
               msg:
@@ -460,10 +386,7 @@ paths:
                 type: integer
               data:
                 properties:
-                  code:
-                    description: 响应码
-                    type: integer
-                  data:
+                  list:
                     description: 客户端列表
                     items:
                       properties:
@@ -489,9 +412,6 @@ paths:
                       - created_at
                       type: object
                     type: array
-                  msg:
-                    description: 响应消息
-                    type: string
                 type: object
               msg:
                 description: business message
@@ -527,23 +447,11 @@ paths:
                 type: integer
               data:
                 properties:
-                  code:
-                    description: 响应码
-                    type: integer
-                  data:
-                    description: 状态数据
-                    properties:
-                      ilink_user_id:
-                        description: iLink 用户 ID（连接后返回）
-                        type: string
-                      status:
-                        description: 状态：pending/connected/disconnected
-                        type: string
-                    required:
-                    - status
-                    type: object
-                  msg:
-                    description: 响应消息
+                  ilink_user_id:
+                    description: iLink 用户 ID（连接后返回）
+                    type: string
+                  status:
+                    description: 状态：pending/connected/disconnected
                     type: string
                 type: object
               msg:
@@ -617,13 +525,6 @@ paths:
                 example: 0
                 type: integer
               data:
-                properties:
-                  code:
-                    description: 响应码
-                    type: integer
-                  msg:
-                    description: 响应消息
-                    type: string
                 type: object
               msg:
                 description: business message
@@ -666,10 +567,7 @@ paths:
                 type: integer
               data:
                 properties:
-                  code:
-                    description: 响应码
-                    type: integer
-                  data:
+                  list:
                     description: 消息列表
                     items:
                       properties:
@@ -700,9 +598,6 @@ paths:
                       - date
                       type: object
                     type: array
-                  msg:
-                    description: 响应消息
-                    type: string
                 type: object
               msg:
                 description: business message
@@ -752,36 +647,20 @@ paths:
                 type: integer
               data:
                 properties:
-                  code:
-                    description: 响应码
+                  date:
+                    description: 消息日期
+                    type: string
+                  id:
+                    description: 消息 ID
                     type: integer
-                  data:
-                    description: 消息数据
-                    properties:
-                      date:
-                        description: 消息日期
-                        type: string
-                      id:
-                        description: 消息 ID
-                        type: integer
-                      message:
-                        description: 消息内容
-                        type: string
-                      priority:
-                        description: 优先级
-                        type: integer
-                      title:
-                        description: 消息标题
-                        type: string
-                    required:
-                    - id
-                    - title
-                    - message
-                    - priority
-                    - date
-                    type: object
-                  msg:
-                    description: 响应消息
+                  message:
+                    description: 消息内容
+                    type: string
+                  priority:
+                    description: 优先级
+                    type: integer
+                  title:
+                    description: 消息标题
                     type: string
                 type: object
               msg:
@@ -829,13 +708,6 @@ paths:
                 example: 0
                 type: integer
               data:
-                properties:
-                  code:
-                    description: 响应码
-                    type: integer
-                  msg:
-                    description: 响应消息
-                    type: string
                 type: object
               msg:
                 description: business message
@@ -865,39 +737,26 @@ paths:
                 type: integer
               data:
                 properties:
-                  code:
-                    description: 响应码
-                    type: integer
-                  data:
-                    description: 登录数据
-                    properties:
-                      token:
-                        description: JWT 令牌
-                        type: string
-                      user:
-                        description: 用户信息
-                        properties:
-                          created_at:
-                            description: 创建时间
-                            type: string
-                          id:
-                            description: 用户 ID
-                            type: integer
-                          username:
-                            description: 用户名
-                            type: string
-                        required:
-                        - id
-                        - username
-                        - created_at
-                        type: object
-                    required:
-                    - token
-                    - user
-                    type: object
-                  msg:
-                    description: 响应消息
+                  token:
+                    description: JWT 令牌
                     type: string
+                  user:
+                    description: 用户信息
+                    properties:
+                      created_at:
+                        description: 创建时间
+                        type: string
+                      id:
+                        description: 用户 ID
+                        type: integer
+                      username:
+                        description: 用户名
+                        type: string
+                    required:
+                    - id
+                    - username
+                    - created_at
+                    type: object
                 type: object
               msg:
                 description: business message
@@ -927,7 +786,7 @@ securityDefinitions:
     name: Authorization
     type: apiKey
 swagger: "2.0"
-x-date: "2026-04-29 21:02:50"
+x-date: "2026-04-30 01:10:02"
 x-description: This is a goctl generated swagger file.
 x-github: https://github.com/zeromicro/go-zero
 x-go-zero-doc: https://go-zero.dev/

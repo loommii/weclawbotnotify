@@ -4,198 +4,183 @@
 package types
 
 type ApplicationData struct {
-	Id        int64  `json:"id"`
-	Token     string `json:"token"`
-	Name      string `json:"name"`
-	CreatedAt string `json:"created_at"`
+	Id        int64  `json:"id"`         // 应用 ID
+	Token     string `json:"token"`      // 应用 Token（用于推送鉴权）
+	Name      string `json:"name"`       // 应用名称
+	CreatedAt string `json:"created_at"` // 创建时间
 }
 
 type ApplicationInfo struct {
-	Id          int64  `json:"id"`
-	Name        string `json:"name"`
-	Description string `json:"description"`
-	CreatedAt   string `json:"created_at"`
-	LastUsedAt  string `json:"last_used_at,optional"`
+	Id          int64  `json:"id"`                    // 应用 ID
+	Name        string `json:"name"`                  // 应用名称
+	Description string `json:"description"`           // 应用描述
+	CreatedAt   string `json:"created_at"`            // 创建时间
+	LastUsedAt  string `json:"last_used_at,optional"` // 最后使用时间
 }
 
 type BaseResp struct {
-	Code int32  `json:"code"`
-	Msg  string `json:"msg"`
+	Code int32  `json:"code"` // 响应码，0 表示成功
+	Msg  string `json:"msg"`  // 响应消息
 }
 
 type ChangePasswordReq struct {
-	OldPassword string `json:"old_password"`
-	NewPassword string `json:"new_password"`
+	OldPassword string `json:"old_password"` // 旧密码
+	NewPassword string `json:"new_password"` // 新密码
 }
 
 type ChangePasswordResp struct {
-	Code int32  `json:"code"`
-	Msg  string `json:"msg"`
 }
 
 type ClientInfo struct {
-	Id          int64  `json:"id"`
-	Name        string `json:"name"`
-	Status      string `json:"status"`
-	IlinkUserId string `json:"ilink_user_id,optional"`
-	CreatedAt   string `json:"created_at"`
+	Id          int64  `json:"id"`                     // 客户端 ID
+	Name        string `json:"name"`                   // 客户端名称
+	Status      string `json:"status"`                 // 状态
+	IlinkUserId string `json:"ilink_user_id,optional"` // iLink 用户 ID
+	CreatedAt   string `json:"created_at"`             // 创建时间
 }
 
 type ClientQRData struct {
-	ClientId  int64  `json:"client_id"`
-	QrcodeUrl string `json:"qrcode_url"`
+	ClientId  int64  `json:"client_id"`  // 客户端 ID
+	QrcodeUrl string `json:"qrcode_url"` // 二维码链接
 }
 
 type ClientStatusData struct {
-	Status      string `json:"status"`
-	IlinkUserId string `json:"ilink_user_id,optional"`
+	Status      string `json:"status"`                 // 状态：pending/connected/disconnected
+	IlinkUserId string `json:"ilink_user_id,optional"` // iLink 用户 ID（连接后返回）
 }
 
 type CreateApplicationReq struct {
-	Name        string `json:"name"`
-	Description string `json:"description,optional"`
+	Name        string `json:"name"`                 // 应用名称
+	Description string `json:"description,optional"` // 应用描述
 }
 
 type CreateApplicationResp struct {
-	Code int32           `json:"code"`
-	Msg  string          `json:"msg"`
-	Data ApplicationData `json:"data"`
+	Id        int64  `json:"id"`         // 应用 ID
+	Token     string `json:"token"`      // 应用 Token（用于推送鉴权）
+	Name      string `json:"name"`       // 应用名称
+	CreatedAt string `json:"created_at"` // 创建时间
 }
 
 type CreateClientReq struct {
-	Name string `json:"name"`
+	Name string `json:"name"` // 客户端名称
 }
 
 type CreateClientResp struct {
-	Code int32        `json:"code"`
-	Msg  string       `json:"msg"`
-	Data ClientQRData `json:"data"`
+	ClientId  int64  `json:"client_id"`  // 客户端 ID
+	QrcodeUrl string `json:"qrcode_url"` // 二维码链接
 }
 
 type CreateMessageReq struct {
-	Title    string `json:"title,optional"`
-	Message  string `json:"message"`
-	Priority int32  `json:"priority,optional"`
+	Title    string `json:"title,optional"`    // 消息标题
+	Message  string `json:"message"`           // 消息内容
+	Priority int32  `json:"priority,optional"` // 优先级
 }
 
 type CreateMessageResp struct {
-	Code int32       `json:"code"`
-	Msg  string      `json:"msg"`
-	Data MessageData `json:"data"`
+	Id       int64  `json:"id"`       // 消息 ID
+	Title    string `json:"title"`    // 消息标题
+	Message  string `json:"message"`  // 消息内容
+	Priority int32  `json:"priority"` // 优先级
+	Date     string `json:"date"`     // 消息日期
 }
 
 type DeleteApplicationReq struct {
-	Id string `path:"id"`
+	Id string `path:"id"` // 应用 ID
 }
 
 type DeleteApplicationResp struct {
-	Code int32  `json:"code"`
-	Msg  string `json:"msg"`
 }
 
 type DeleteClientReq struct {
-	Id string `path:"id"`
+	Id string `path:"id"` // 客户端 ID
 }
 
 type DeleteClientResp struct {
-	Code int32  `json:"code"`
-	Msg  string `json:"msg"`
 }
 
 type DeleteMessageReq struct {
-	Id string `path:"id"`
+	Id string `path:"id"` // 消息 ID
 }
 
 type DeleteMessageResp struct {
-	Code int32  `json:"code"`
-	Msg  string `json:"msg"`
 }
 
 type HealthResp struct {
-	ServiceName string `json:"serviceName"`
-	Timestamp   int64  `json:"timestamp"`
-	Message     string `json:"message"`
+	ServiceName string `json:"serviceName"` // 服务名称
+	Timestamp   int64  `json:"timestamp"`   // 服务器当前时间戳
+	Message     string `json:"message"`     // 响应消息，e.g. "ok"
 }
 
 type ListApplicationsResp struct {
-	Code int32             `json:"code"`
-	Msg  string            `json:"msg"`
-	Data []ApplicationInfo `json:"data"`
+	List []ApplicationInfo `json:"list"` // 应用列表
 }
 
 type ListClientsResp struct {
-	Code int32        `json:"code"`
-	Msg  string       `json:"msg"`
-	Data []ClientInfo `json:"data"`
+	List []ClientInfo `json:"list"` // 客户端列表
 }
 
 type ListMessagesReq struct {
-	Limit int64 `form:"limit,default=20"`
-	Since int64 `form:"since,optional"`
+	Limit int64 `form:"limit,default=20"` // 每页数量，默认 20
+	Since int64 `form:"since,optional"`   // 游标，返回此 ID 之前的消息
 }
 
 type ListMessagesResp struct {
-	Code int32         `json:"code"`
-	Msg  string        `json:"msg"`
-	Data []MessageInfo `json:"data"`
+	List []MessageInfo `json:"list"` // 消息列表
 }
 
 type LoginData struct {
-	Token string   `json:"token"`
-	User  UserInfo `json:"user"`
+	Token string   `json:"token"` // JWT 令牌
+	User  UserInfo `json:"user"`  // 用户信息
 }
 
 type LoginReq struct {
-	Username string `json:"username"`
-	Password string `json:"password"`
+	Username string `json:"username"` // 用户名
+	Password string `json:"password"` // 密码
 }
 
 type LoginResp struct {
-	Code int32     `json:"code"`
-	Msg  string    `json:"msg"`
-	Data LoginData `json:"data"`
+	Token string   `json:"token"` // JWT 令牌
+	User  UserInfo `json:"user"`  // 用户信息
 }
 
 type MessageData struct {
-	Id       int64  `json:"id"`
-	Title    string `json:"title"`
-	Message  string `json:"message"`
-	Priority int32  `json:"priority"`
-	Date     string `json:"date"`
+	Id       int64  `json:"id"`       // 消息 ID
+	Title    string `json:"title"`    // 消息标题
+	Message  string `json:"message"`  // 消息内容
+	Priority int32  `json:"priority"` // 优先级
+	Date     string `json:"date"`     // 消息日期
 }
 
 type MessageInfo struct {
-	Id            int64  `json:"id"`
-	ApplicationId int64  `json:"application_id"`
-	Title         string `json:"title"`
-	Message       string `json:"message"`
-	Priority      int32  `json:"priority"`
-	Date          string `json:"date"`
+	Id            int64  `json:"id"`             // 消息 ID
+	ApplicationId int64  `json:"application_id"` // 所属应用 ID
+	Title         string `json:"title"`          // 消息标题
+	Message       string `json:"message"`        // 消息内容
+	Priority      int32  `json:"priority"`       // 优先级
+	Date          string `json:"date"`           // 消息日期
 }
 
 type PollClientStatusReq struct {
-	ClientId int64 `form:"client_id"`
+	ClientId int64 `form:"client_id"` // 客户端 ID
 }
 
 type PollClientStatusResp struct {
-	Code int32            `json:"code"`
-	Msg  string           `json:"msg"`
-	Data ClientStatusData `json:"data"`
+	Status      string `json:"status"`                 // 状态：pending/connected/disconnected
+	IlinkUserId string `json:"ilink_user_id,optional"` // iLink 用户 ID（连接后返回）
 }
 
 type RegisterReq struct {
-	Username string `json:"username"`
-	Password string `json:"password"`
+	Username string `json:"username"` // 用户名
+	Password string `json:"password"` // 密码
 }
 
 type RegisterResp struct {
-	Code int32     `json:"code"`
-	Msg  string    `json:"msg"`
-	Data LoginData `json:"data"`
+	Token string   `json:"token"` // JWT 令牌
+	User  UserInfo `json:"user"`  // 用户信息
 }
 
 type UserInfo struct {
-	Id        int64  `json:"id"`
-	Username  string `json:"username"`
-	CreatedAt string `json:"created_at"`
+	Id        int64  `json:"id"`         // 用户 ID
+	Username  string `json:"username"`   // 用户名
+	CreatedAt string `json:"created_at"` // 创建时间
 }

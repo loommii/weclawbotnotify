@@ -81,7 +81,7 @@ note right
 end note
 deactivate AppSvc
 
-API --> Web : 200 OK\n{ applications: [...] }
+API --> Web : 200 OK\n{ list: [...] }
 deactivate API
 
 Web --> User : 显示 Application 列表\n(名称、描述、创建时间、最后使用时间)

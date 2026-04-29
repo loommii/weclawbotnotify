@@ -1,0 +1,157 @@
+@startuml WeClawBotNotify_RegisterSequence
+
+title WeClawBotNotify V1 - 用户注册与初始化序列图
+
+== 第一部分：用户注册账号 ==
+
+actor "用户" as User
+participant "Web 管理后台\n(浏览器)" as Web
+participant "server/HTTPServer" as API
+participant "auth/AccountService" as AccountSvc
+participant "SQLite" as DB
+
+User -> Web : 打开注册页面
+activate Web
+
+Web -> API : POST /api/auth/register\n{ username, password }
+activate API
+
+API -> AccountSvc : register(username, password)
+activate AccountSvc
+
+AccountSvc -> AccountSvc : hashPassword(password)
+
+AccountSvc -> DB : INSERT INTO users\n(username, password_hash)\nVALUES (?, ?)
+activate DB
+DB --> AccountSvc : userId
+deactivate DB
+
+AccountSvc --> API : userId, nil
+deactivate AccountSvc
+
+API -> AccountSvc : login(username, password)
+activate AccountSvc
+AccountSvc -> DB : SELECT * FROM users\nWHERE username = ?
+activate DB
+DB --> AccountSvc : User
+deactivate DB
+AccountSvc -> AccountSvc : checkPassword(password, hash)
+AccountSvc -> AccountSvc : generateJWT(userId)
+AccountSvc --> API : jwtToken, nil
+deactivate AccountSvc
+
+API --> Web : 200 OK\n{ token, user: { id, username } }
+deactivate API
+
+Web --> User : 注册成功，自动登录\n跳转到 Dashboard
+deactivate Web
+
+== 第二部分：创建 Client (绑定微信Bot) ==
+
+User -> Web : 点击"创建 Client"\n输入名称 "我的微信"
+activate Web
+
+Web -> API : POST /api/client/create\n{ name: "我的微信" }\nAuthorization: Bearer {jwt}
+activate API
+
+API -> API : ClientAuth 验证 JWT → userId
+
+participant "client/ClientService" as ClientSvc
+participant "ilink/WeixinMonitor" as Monitor
+participant "ilink/WeixinApiClient" as Client
+participant "ilink/WeixinAuth" as Auth
+participant "微信 iLink 服务器" as WeChat
+
+API -> ClientSvc : createClient(userId, "我的微信")
+activate ClientSvc
+
+ClientSvc -> Auth : fetchQRCode(botType: "3")
+activate Auth
+Auth -> WeChat : GET /ilink/bot/get_bot_qrcode?bot_type=3
+WeChat --> Auth : { qrcode, qrcode_img_content }
+Auth --> ClientSvc : QRCodeResult
+deactivate Auth
+
+ClientSvc -> DB : INSERT INTO clients\n(user_id, name, status: "pending")
+activate DB
+DB --> ClientSvc : clientId
+deactivate DB
+
+ClientSvc --> API : ClientQRResult { qrcodeUrl, clientId }
+deactivate ClientSvc
+
+API --> Web : { qrcodeUrl, clientId }
+deactivate API
+
+Web --> User : 展示二维码\n"请用微信扫码"
+deactivate Web
+
+User -> WeChat : 微信扫描二维码确认
+
+loop 前端轮询状态
+  Web -> API : GET /api/client/status?clientId=xxx
+  API -> ClientSvc : pollClientStatus(userId, clientId)
+  ClientSvc -> Auth : pollQRStatus(sessionKey)
+  Auth -> WeChat : GET /ilink/bot/get_qrcode_status
+  WeChat --> Auth : { status }
+  Auth --> ClientSvc : { status }
+  ClientSvc --> API : ClientStatus
+  API --> Web : { status }
+end
+
+WeChat --> Auth : { status: "confirmed", bot_token, ilink_user_id }
+
+API -> DB : UPDATE clients\nSET ilink_user_id = ?,\n    status = "bound"\nWHERE id = ?
+
+API -> API : 启动 WeixinMonitor
+
+Web --> User : ✅ Client 创建成功\n微信Bot已绑定
+
+== 第三部分：创建 Application (生成推送Token) ==
+
+User -> Web : 点击"创建 Application"\n输入名称 "Jenkins CI"
+activate Web
+
+participant "application/ApplicationService" as AppSvc
+
+Web -> API : POST /api/application\n{ name: "Jenkins CI", description: "..." }\nAuthorization: Bearer {jwt}
+activate API
+
+API -> API : ClientAuth 验证 JWT → userId
+
+API -> AppSvc : createApplication(userId, "Jenkins CI", "...")
+activate AppSvc
+
+AppSvc -> AppSvc : generateAppToken()\n生成随机 Token (如 app_xxx...)
+
+AppSvc -> DB : INSERT INTO applications\n(user_id, token, name, description)\nVALUES (?, ?, ?, ?)
+activate DB
+DB --> AppSvc : appId
+deactivate DB
+
+AppSvc --> API : Application { id, token (明文仅此一次), name }
+note right
+  Token 明文仅在创建时返回一次
+  之后只存储 hash
+  用户必须妥善保存
+end note
+deactivate AppSvc
+
+API --> Web : 200 OK\n{ id, token: "app_xxx...", name, createdAt }
+deactivate API
+
+Web --> User : ✅ Application 创建成功\n⚠️ 请立即复制 Token\nToken 仅显示一次！
+deactivate Web
+
+note over User, WeChat
+  初始化完成：
+  1. 用户账号已注册
+  2. Client 已创建 (微信Bot已绑定)
+  3. Application 已创建 (推送Token已生成)
+  ===
+  外部系统可使用 appToken
+  调用 POST /api/message 推送通知
+  通知通过 Client 推送到用户微信
+end note
+
+@enduml

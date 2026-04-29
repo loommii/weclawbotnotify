@@ -1,0 +1,294 @@
+syntax = "v1"
+
+info (
+	title:   "WeClawBotNotify API"
+	desc:    "微信通知推送系统 API"
+	author:  "weclawbotnotify"
+	version: "v1"
+)
+
+// ==================== 通用类型 ====================
+type BaseResp {
+	Code int32  `json:"code"`
+	Msg  string `json:"msg"`
+}
+
+type HealthResp {
+	ServiceName string `json:"serviceName"`
+	Timestamp   int64  `json:"timestamp"`
+	Message     string `json:"message"`
+}
+
+// ==================== 认证相关 ====================
+type (
+	RegisterReq {
+		Username string `json:"username"`
+		Password string `json:"password"`
+	}
+	UserInfo {
+		Id        int64  `json:"id"`
+		Username  string `json:"username"`
+		CreatedAt string `json:"created_at"`
+	}
+	LoginData {
+		Token string   `json:"token"`
+		User  UserInfo `json:"user"`
+	}
+	RegisterResp {
+		Code int32     `json:"code"`
+		Msg  string    `json:"msg"`
+		Data LoginData `json:"data"`
+	}
+	LoginReq {
+		Username string `json:"username"`
+		Password string `json:"password"`
+	}
+	LoginResp {
+		Code int32     `json:"code"`
+		Msg  string    `json:"msg"`
+		Data LoginData `json:"data"`
+	}
+)
+
+// ==================== 用户相关 ====================
+type (
+	ChangePasswordReq {
+		OldPassword string `json:"old_password"`
+		NewPassword string `json:"new_password"`
+	}
+	ChangePasswordResp {
+		Code int32  `json:"code"`
+		Msg  string `json:"msg"`
+	}
+)
+
+// ==================== Client 相关 ====================
+type (
+	CreateClientReq {
+		Name string `json:"name"`
+	}
+	ClientQRData {
+		ClientId  int64  `json:"client_id"`
+		QrcodeUrl string `json:"qrcode_url"`
+	}
+	CreateClientResp {
+		Code int32        `json:"code"`
+		Msg  string       `json:"msg"`
+		Data ClientQRData `json:"data"`
+	}
+	PollClientStatusReq {
+		ClientId int64 `form:"client_id"`
+	}
+	ClientStatusData {
+		Status      string `json:"status"`
+		IlinkUserId string `json:"ilink_user_id,optional"`
+	}
+	PollClientStatusResp {
+		Code int32            `json:"code"`
+		Msg  string           `json:"msg"`
+		Data ClientStatusData `json:"data"`
+	}
+	DeleteClientReq {
+		Id string `path:"id"`
+	}
+	DeleteClientResp {
+		Code int32  `json:"code"`
+		Msg  string `json:"msg"`
+	}
+	ClientInfo {
+		Id          int64  `json:"id"`
+		Name        string `json:"name"`
+		Status      string `json:"status"`
+		IlinkUserId string `json:"ilink_user_id,optional"`
+		CreatedAt   string `json:"created_at"`
+	}
+	ListClientsResp {
+		Code int32        `json:"code"`
+		Msg  string       `json:"msg"`
+		Data []ClientInfo `json:"data"`
+	}
+)
+
+// ==================== Application 相关 ====================
+type (
+	CreateApplicationReq {
+		Name        string `json:"name"`
+		Description string `json:"description,optional"`
+	}
+	ApplicationData {
+		Id        int64  `json:"id"`
+		Token     string `json:"token"`
+		Name      string `json:"name"`
+		CreatedAt string `json:"created_at"`
+	}
+	CreateApplicationResp {
+		Code int32           `json:"code"`
+		Msg  string          `json:"msg"`
+		Data ApplicationData `json:"data"`
+	}
+	ApplicationInfo {
+		Id          int64  `json:"id"`
+		Name        string `json:"name"`
+		Description string `json:"description"`
+		CreatedAt   string `json:"created_at"`
+		LastUsedAt  string `json:"last_used_at,optional"`
+	}
+	ListApplicationsResp {
+		Code int32             `json:"code"`
+		Msg  string            `json:"msg"`
+		Data []ApplicationInfo `json:"data"`
+	}
+	DeleteApplicationReq {
+		Id string `path:"id"`
+	}
+	DeleteApplicationResp {
+		Code int32  `json:"code"`
+		Msg  string `json:"msg"`
+	}
+)
+
+// ==================== Message 相关 ====================
+type (
+	CreateMessageReq {
+		Title    string `json:"title,optional"`
+		Message  string `json:"message"`
+		Priority int32  `json:"priority,optional"`
+	}
+	MessageData {
+		Id       int64  `json:"id"`
+		Title    string `json:"title"`
+		Message  string `json:"message"`
+		Priority int32  `json:"priority"`
+		Date     string `json:"date"`
+	}
+	CreateMessageResp {
+		Code int32       `json:"code"`
+		Msg  string      `json:"msg"`
+		Data MessageData `json:"data"`
+	}
+	ListMessagesReq {
+		Limit int64 `form:"limit,default=20"`
+		Since int64 `form:"since,optional"`
+	}
+	MessageInfo {
+		Id            int64  `json:"id"`
+		ApplicationId int64  `json:"application_id"`
+		Title         string `json:"title"`
+		Message       string `json:"message"`
+		Priority      int32  `json:"priority"`
+		Date          string `json:"date"`
+	}
+	ListMessagesResp {
+		Code int32         `json:"code"`
+		Msg  string        `json:"msg"`
+		Data []MessageInfo `json:"data"`
+	}
+	DeleteMessageReq {
+		Id string `path:"id"`
+	}
+	DeleteMessageResp {
+		Code int32  `json:"code"`
+		Msg  string `json:"msg"`
+	}
+)
+
+// ==================== 路由分组 ====================
+// 认证（公开，无需鉴权）
+@server (
+	prefix: /api/auth
+	group:  auth
+)
+service weclawbotnotify-api {
+	@handler Register
+	post /register (RegisterReq) returns (RegisterResp)
+
+	@handler Login
+	post /login (LoginReq) returns (LoginResp)
+}
+
+// 用户（ClientAuth 鉴权）
+@server (
+	prefix:     /api/user
+	group:      user
+	middleware: ClientAuth
+)
+service weclawbotnotify-api {
+	@handler GetProfile
+	get /profile returns (RegisterResp)
+
+	@handler ChangePassword
+	post /password (ChangePasswordReq) returns (ChangePasswordResp)
+}
+
+// Client 管理（ClientAuth 鉴权）
+@server (
+	prefix:     /api/client
+	group:      client
+	middleware: ClientAuth
+)
+service weclawbotnotify-api {
+	@handler CreateClient
+	post /create (CreateClientReq) returns (CreateClientResp)
+
+	@handler PollClientStatus
+	get /status (PollClientStatusReq) returns (PollClientStatusResp)
+
+	@handler ListClients
+	get /list returns (ListClientsResp)
+
+	@handler DeleteClient
+	delete /:id (DeleteClientReq) returns (DeleteClientResp)
+}
+
+// Application 管理（ClientAuth 鉴权）
+@server (
+	prefix:     /api/application
+	group:      application
+	middleware: ClientAuth
+)
+service weclawbotnotify-api {
+	@handler CreateApplication
+	post /create (CreateApplicationReq) returns (CreateApplicationResp)
+
+	@handler ListApplications
+	get /list returns (ListApplicationsResp)
+
+	@handler DeleteApplication
+	delete /:id (DeleteApplicationReq) returns (DeleteApplicationResp)
+}
+
+// 消息管理（ClientAuth 鉴权 - 查看历史/删除）
+@server (
+	prefix:     /api/message
+	group:      message
+	middleware: ClientAuth
+)
+service weclawbotnotify-api {
+	@handler ListMessages
+	get /list (ListMessagesReq) returns (ListMessagesResp)
+
+	@handler DeleteMessage
+	delete /:id (DeleteMessageReq) returns (DeleteMessageResp)
+}
+
+// 推送 API（ApplicationAuth 鉴权 - 外部系统推送通知）
+@server (
+	prefix:     /api/message
+	group:      message
+	middleware: ApplicationAuth
+)
+service weclawbotnotify-api {
+	@handler CreateMessage
+	post /push (CreateMessageReq) returns (CreateMessageResp)
+}
+
+// 健康检查（无需鉴权）
+@server (
+	prefix: /api
+	group:  health
+)
+service weclawbotnotify-api {
+	@handler Health
+	get /health returns (HealthResp)
+}
+

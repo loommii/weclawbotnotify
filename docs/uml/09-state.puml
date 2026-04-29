@@ -1,0 +1,131 @@
+@startuml WeClawBotNotify_State
+
+title WeClawBotNotify V1 - 系统状态图
+
+[*] --> SystemStarting : 启动服务
+
+state SystemStarting {
+  [*] --> LoadingConfig
+  LoadingConfig --> InitializingDB : 配置有效
+  InitializingDB --> InitializingServices : 数据库就绪
+  InitializingServices --> CheckingClients : 服务初始化完成
+  CheckingClients --> Running : 检查完成
+}
+
+SystemStarting --> Running : 启动成功
+
+state Running {
+
+  state "Client 生命周期" as ClientLifecycle {
+    [*] --> ClientPending : 等待用户创建 Client
+
+    state "Client 未创建" as ClientPending {
+      [*] --> WaitingUserAction
+    }
+
+    state "Client 认证中" as ClientAuthenticating {
+      state "获取二维码" as FetchingQR
+      state "等待扫码" as WaitingScan
+      state "二维码过期" as QRExpired
+      state "已扫码" as Scanned
+      state "IDC 重定向" as IDCRedirect
+
+      FetchingQR --> WaitingScan : 二维码展示成功
+      WaitingScan --> Scanned : 用户扫码
+      WaitingScan --> QRExpired : 超时 (5分钟)
+      WaitingScan --> IDCRedirect : 收到 redirect_host
+      IDCRedirect --> WaitingScan : 切换服务器
+      QRExpired --> FetchingQR : 重新获取
+      Scanned --> ClientBound : 确认登录
+      Scanned --> WaitingScan : 取消
+    }
+
+    state "Client 已绑定" as ClientBound {
+      [*] --> Polling
+
+      state "长轮询中" as Polling {
+        Polling --> ProcessingInbound : GetUpdates 返回消息
+        Polling --> Polling : 超时 (35s)
+      }
+
+      state "处理入站消息" as ProcessingInbound {
+        [*] --> RecordMessage
+        RecordMessage --> AutoReply
+        AutoReply --> [*]
+      }
+
+      ProcessingInbound --> Polling : 处理完成
+
+      Polling --> SessionExpired : errcode = -14
+      Polling --> Retrying : 网络错误
+    }
+
+    state "Session 过期" as SessionExpired {
+      [*] --> BackingOff
+      BackingOff --> WaitingReauth : 等待 1 小时
+      WaitingReauth --> ClientPending : 标记为需重新创建
+    }
+
+    state "重试中" as Retrying {
+      [*] --> CalculatingBackoff
+      CalculatingBackoff --> AttemptingRetry
+      AttemptingRetry --> Polling : 重试成功
+      AttemptingRetry --> ClientError : 连续失败 3 次
+    }
+
+    ClientPending --> ClientAuthenticating : 用户点击"创建Client"
+    ClientAuthenticating --> ClientBound : 扫码成功
+    ClientAuthenticating --> ClientPending : 失败/取消
+    ClientBound --> SessionExpired : session 过期
+    ClientBound --> Retrying : 网络错误
+    ClientBound --> ClientError : 致命错误
+  }
+
+  state "用户账户状态" as UserAccountState {
+    [*] --> Unregistered : 新用户
+
+    state "未注册" as Unregistered
+
+    state "已注册" as Registered {
+      [*] --> Active
+      state "活跃" as Active
+    }
+
+    Unregistered --> Registered : POST /api/auth/register
+  }
+
+  state "Application 状态" as AppState {
+    [*] --> AppCreated : 用户创建 Application
+    state "有效" as AppActive
+    state "已删除" as AppDeleted
+
+    AppCreated --> AppActive : 创建成功
+    AppActive --> AppDeleted : DELETE /api/application/:id
+  }
+}
+
+Running --> Stopping : SIGTERM
+
+state "停止中" as Stopping {
+  [*] --> SavingState
+  SavingState --> ClosingConnections : 状态保存完成
+  ClosingConnections --> Stopped : 资源清理完成
+}
+
+ClientError --> Stopping : 优雅退出
+Stopped --> SystemStarting : 重启
+
+note right of ClientLifecycle
+  Client = 消息接收终端
+  通过管理后台创建
+  扫码绑定微信Bot
+  bot_token 过期需重新创建
+end note
+
+note right of AppState
+  Application = 推送应用凭证
+  每个有独立 Token
+  外部系统用此 Token 推送消息
+end note
+
+@enduml

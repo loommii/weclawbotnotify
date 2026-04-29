@@ -1,0 +1,113 @@
+@startuml WeClawBotNotify_ClientCreateSequence
+
+title WeClawBotNotify V1 - 创建 Client (绑定微信Bot) 序列图
+
+actor "用户" as User
+participant "Web 管理后台\n(浏览器)" as Web
+participant "server/HTTPServer" as API
+participant "client/ClientService" as ClientSvc
+participant "ilink/WeixinAuth" as Auth
+participant "SQLite" as DB
+participant "微信 iLink 服务器" as WeChat
+
+User -> Web : 点击"创建 Client"\n输入名称 (如"我的微信")
+activate Web
+
+Web -> API : POST /api/client/create\n{ name: "我的微信" }\nAuthorization: Bearer {jwt}
+activate API
+
+API -> API : ClientAuth 验证 JWT → userId
+
+API -> ClientSvc : createClient(userId, name)
+activate ClientSvc
+
+ClientSvc -> Auth : fetchQRCode(botType: "3")
+activate Auth
+
+Auth -> WeChat : GET /ilink/bot/get_bot_qrcode?bot_type=3
+activate WeChat
+WeChat --> Auth : { qrcode, qrcode_img_content }
+deactivate WeChat
+
+Auth --> ClientSvc : QRCodeResult { qrcodeUrl, sessionKey }
+deactivate Auth
+
+ClientSvc -> DB : INSERT INTO clients\n(user_id, name, token, status: "pending")\nVALUES (?, ?, ?, ?)
+activate DB
+DB --> ClientSvc : clientId
+deactivate DB
+
+ClientSvc -> ClientSvc : 保存 ClientSession\n{ userId, clientId, qrcode, status: "pending" }
+
+ClientSvc --> API : ClientQRResult { qrcodeUrl, clientId }
+deactivate ClientSvc
+
+API --> Web : { qrcodeUrl, clientId }
+deactivate API
+
+Web --> User : 页面展示二维码\n"请用微信扫码"
+deactivate Web
+
+User -> WeChat : 微信扫描二维码确认
+
+loop 长轮询查询状态 (前端轮询)
+  Web -> API : GET /api/client/status?clientId=xxx\nAuthorization: Bearer {jwt}
+  activate API
+
+  API -> ClientSvc : pollClientStatus(userId, clientId)
+  activate ClientSvc
+
+  ClientSvc -> Auth : pollQRStatus(sessionKey)
+  activate Auth
+
+  Auth -> WeChat : GET /ilink/bot/get_qrcode_status?qrcode={qrcode}
+  WeChat --> Auth : { status }
+
+  alt status = "scanned_but_redirect"
+    Auth -> Auth : 更新 baseUrl = redirect_host
+    note right
+      IDC 重定向
+      切换到就近服务器节点
+    end note
+  end
+
+  Auth --> ClientSvc : { status: "waiting" }
+  deactivate Auth
+
+  ClientSvc --> API : ClientStatus { status: "waiting" }
+  deactivate ClientSvc
+
+  API --> Web : { status: "waiting" }
+  deactivate API
+end
+
+WeChat --> Auth : { status: "confirmed", bot_token, ilink_user_id, baseurl }
+
+Web -> API : GET /api/client/status?clientId=xxx
+activate API
+
+API -> ClientSvc : pollClientStatus(userId, clientId)
+activate ClientSvc
+ClientSvc --> API : ClientStatus {\n  status: "bound",\n  ilinkUserId: "xxx@im.wechat"\n}
+deactivate ClientSvc
+
+API -> DB : UPDATE clients\nSET ilink_user_id = ?,\n    status = "bound"\nWHERE id = ?
+activate DB
+DB --> API : OK
+deactivate DB
+
+API -> API : 启动 WeixinMonitor\n(开始长轮询接收消息)
+
+API --> Web : { status: "bound",\n  ilinkUserId: "xxx@im.wechat" }
+deactivate API
+
+Web --> User : ✅ Client 创建成功\n微信Bot已绑定
+deactivate Web
+
+note over User, WeChat
+  Client 创建后持续运行
+  Monitor 长轮询保活
+  bot_token 过期需重新创建 Client
+end note
+
+@enduml

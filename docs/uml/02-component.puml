@@ -1,0 +1,217 @@
+@startuml WeClawBotNotify_Component
+
+skinparam componentStyle uml2
+skinparam linetype ortho
+
+title WeClawBotNotify V1 - 组件图\n(单用户 · 微信通知推送)
+
+package "Web 管理后台 (前端)" {
+  [pages/Login] as LoginPage
+  [pages/Register] as RegisterPage
+  [pages/Dashboard] as DashboardPage
+  note right of DashboardPage
+    用户主面板
+    ===
+    - 创建 Client (绑定微信Bot)
+    - 创建 Application (生成推送Token)
+    - 查看通知记录
+    - 修改密码
+  end note
+}
+
+package "HTTP 服务 (后端统一入口)" {
+  [server/HTTPServer] as HTTPServer
+  note right of HTTPServer
+    统一 HTTP 服务
+    同时服务前端 + API
+    ===
+    管理后台路由 (Client Auth):
+    POST /api/auth/register    注册
+    POST /api/auth/login       登录
+    GET  /api/user/profile     用户信息
+    POST /api/user/password    修改密码
+    POST /api/client/create    创建Client(获取二维码)
+    GET  /api/client/status    查询Client状态
+    DELETE /api/client/:id     删除Client
+    POST /api/application      创建Application
+    GET  /api/application      Application列表
+    DELETE /api/application/:id 删除Application
+    GET  /api/message          通知记录
+    ===
+    推送API路由 (Application Auth):
+    POST /api/message          推送通知
+    GET  /health               健康检查
+  end note
+
+  [middleware/ClientAuth] as ClientAuth
+  note right of ClientAuth
+    管理后台会话认证
+    JWT / Session Cookie
+    登录后签发
+  end note
+
+  [middleware/ApplicationAuth] as ApplicationAuth
+  note right of ApplicationAuth
+    推送API的Application Token认证
+    Token由用户在后台创建Application时生成
+    外部系统调用时携带
+  end note
+}
+
+package "账户服务" {
+  [auth/AccountService] as AccountSvc
+  note right of AccountSvc
+    自建账户体系
+    ===
+    register(username, password)
+    login(username, password) → JWT
+    changePassword(userId, oldPwd, newPwd)
+    verifyToken(jwt) → userId
+  end note
+}
+
+package "Client 服务 (消息接收端管理)" {
+  [client/ClientService] as ClientSvc
+  note right of ClientSvc
+    管理消息接收终端
+    ===
+    createClient(userId) → QRCode
+    pollClientStatus(userId, clientId) → status
+    bindClient(userId, ilinkUserId) → Client
+    deleteClient(userId, clientId)
+    getClients(userId) → Client[]
+    ===
+    Client = 消息接收端
+    通道: 微信 iLink
+  end note
+}
+
+package "Application 服务 (推送凭证管理)" {
+  [application/ApplicationService] as AppSvc
+  note right of AppSvc
+    管理推送应用凭证
+    ===
+    createApplication(userId, name, desc) → Application
+    getApplications(userId) → Application[]
+    deleteApplication(userId, appId)
+    validateAppToken(token) → userId
+    ===
+    每个Application有独立Token
+    外部系统用此Token推送消息
+  end note
+}
+
+package "Message 服务 (通知推送)" {
+  [message/MessageService] as MsgSvc
+  note right of MsgSvc
+    通知推送核心
+    ===
+    createMessage(appToken, title, text, priority) → Message
+    getMessages(userId, limit, since) → Message[]
+    deleteMessage(userId, msgId)
+    ===
+    推送时遍历用户所有Client
+    通过 iLink sendMessage 发送
+  end note
+}
+
+package "iLink 微信协议层" {
+  [ilink/Client] as ILClient
+  note right of ILClient
+    WeixinApiClient
+    ===
+    sendMessage / getUpdates
+    getConfig / sendTyping
+  end note
+
+  [ilink/Monitor] as ILMonitor
+  note right of ILMonitor
+    长轮询监听
+    ===
+    持续 getUpdates (心跳保活)
+    游标持久化
+    自动重连
+  end note
+
+  [ilink/Auth] as ILAuth
+  note right of ILAuth
+    扫码登录
+    ===
+    fetchQRCode
+    pollQRStatus
+    凭证持久化
+  end note
+}
+
+package "基础设施" {
+  [config/ConfigManager] as Config
+  [util/Logger] as Logger
+}
+
+database "SQLite" as DB {
+  folder "数据表" {
+    artifact "users" as UsersTable
+    note right of UsersTable
+      id, username, password_hash
+      created_at, updated_at
+    end note
+    artifact "clients" as ClientsTable
+    note right of ClientsTable
+      id, user_id, token, name
+      ilink_user_id, status
+      created_at, last_used_at
+    end note
+    artifact "applications" as AppsTable
+    note right of AppsTable
+      id, user_id, token, name
+      description, default_priority
+      created_at, last_used_at
+    end note
+    artifact "messages" as MessagesTable
+    note right of MessagesTable
+      id, application_id, title
+      message, priority, date
+    end note
+  }
+}
+
+database "文件系统" as FS {
+  file "bot-credentials.json" as CredsFile
+  file "*.sync.json" as SyncFile
+}
+
+cloud "微信 iLink 服务" as WeChat {
+  [ilinkai.weixin.qq.com] as WeChatAPI
+}
+
+LoginPage --> HTTPServer
+RegisterPage --> HTTPServer
+DashboardPage --> HTTPServer
+
+HTTPServer --> ClientAuth : 管理后台路由
+HTTPServer --> ApplicationAuth : 推送API路由
+
+ClientAuth --> AccountSvc : 验证JWT
+ApplicationAuth --> AppSvc : 验证Application Token
+
+HTTPServer --> AccountSvc : 注册/登录/改密
+HTTPServer --> ClientSvc : 创建Client
+HTTPServer --> AppSvc : Application管理
+HTTPServer --> MsgSvc : 推送通知/查看记录
+
+AccountSvc --> DB : 读写users表
+ClientSvc --> ILAuth : 获取二维码/轮询状态
+ClientSvc --> DB : 读写clients表
+AppSvc --> DB : 读写applications表
+
+MsgSvc --> ILClient : sendMessage
+MsgSvc --> DB : 读写messages表
+
+ILMonitor --> ILClient
+ILAuth --> WeChatAPI : HTTPS
+ILClient --> WeChatAPI : HTTPS
+
+ILAuth ..> CredsFile : 读写
+ILMonitor ..> SyncFile : 读写
+
+@enduml

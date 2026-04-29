@@ -1,0 +1,89 @@
+@startuml WeClawBotNotify_UseCase
+
+left to right direction
+skinparam packageStyle rectangle
+skinparam actorStyle awesome
+skinparam linetype ortho
+
+title WeClawBotNotify V1 - 用例图\n(单用户 · 微信通知推送)
+
+rectangle "WeClawBotNotify 消息通知系统" {
+
+  package "管理后台 (Client Auth)" {
+    usecase "注册账号\n(创建 User)" as UC_REGISTER
+    usecase "登录管理后台\n(获取 Session)" as UC_LOGIN
+    usecase "创建 Client\n(绑定微信 Bot)" as UC_CREATE_CLIENT
+    usecase "创建 Application\n(生成推送 Token)" as UC_CREATE_APP
+    usecase "查看通知记录\n(查看 Messages)" as UC_HISTORY
+    usecase "修改密码" as UC_CHANGE_PWD
+  }
+
+  package "消息推送 API (Application Auth)" {
+    usecase "推送文本通知\n(Create Message)" as UC_NOTIFY_TEXT
+  }
+}
+
+actor "用户\n(V1仅1个)" as User
+actor "外部系统\n(CI/CD/监控/告警)" as External
+
+User --> UC_REGISTER
+User --> UC_LOGIN
+User --> UC_CREATE_CLIENT
+User --> UC_CREATE_APP
+User --> UC_HISTORY
+User --> UC_CHANGE_PWD
+
+External --> UC_NOTIFY_TEXT
+
+UC_CREATE_CLIENT ..> UC_LOGIN : <<include>>
+UC_CREATE_APP ..> UC_LOGIN : <<include>>
+UC_NOTIFY_TEXT ..> UC_CREATE_APP : <<precondition>>\n需 Application Token
+UC_NOTIFY_TEXT ..> UC_CREATE_CLIENT : <<precondition>>\n需已绑定接收端
+
+note right of UC_CREATE_CLIENT
+  注册消息接收终端
+  ===
+  用户扫码登录微信Bot
+  获取 ilink_user_id
+  ===
+  Client = 消息接收端
+  通道: 微信 iLink
+  可创建多个 Client
+  (如: 工作微信 / 个人微信)
+end note
+
+note right of UC_CREATE_APP
+  创建推送应用凭证
+  ===
+  生成 Application Token
+  交给外部系统使用
+  可创建多个 Application
+  (如: Jenkins / Prometheus / 脚本)
+  ===
+  appToken → POST /api/notify
+end note
+
+note right of UC_NOTIFY_TEXT
+  外部系统推送通知
+  ===
+  POST /api/notify
+  Authorization: Bearer {appToken}
+  { title, message, priority }
+  ===
+  消息通过 Client (微信Bot)
+  推送到用户微信
+end note
+
+note bottom of UC_REGISTER
+  自建账户体系
+  用户名 + 密码注册
+  与微信账号独立
+  V1 仅1个用户
+end note
+
+note bottom of UC_LOGIN
+  登录后获取管理后台会话
+  用于操作 Application / Client
+end note
+
+@enduml

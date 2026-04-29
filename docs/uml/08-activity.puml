@@ -1,0 +1,113 @@
+@startuml WeClawBotNotify_Activity
+
+title WeClawBotNotify V1 - 系统活动图
+
+start
+
+:系统启动;
+:加载配置;
+:初始化 SQLite 数据库;
+:初始化 AccountService;
+:初始化 ClientService;
+:初始化 ApplicationService;
+:初始化 MessageService;
+
+if (存在已绑定的 Client?) then (是)
+  :加载 Bot 凭证;
+  :初始化 WeixinApiClient;
+  :启动 WeixinMonitor (长轮询);
+else (否)
+  :等待用户通过管理后台创建 Client;
+endif
+
+:启动 HTTPServer (前端 + API);
+
+fork
+  :WeixinMonitor 长轮询循环;
+  repeat
+    :WeixinApiClient.getUpdates();
+    if (收到新消息?) then (yes)
+      :提取 from_user_id 和消息内容;
+      :记录入站消息到 messages;
+      :发送自动回复\n("请使用管理后台操作");
+    else (超时/无消息)
+    endif
+
+    if (errcode = -14?) then (yes)
+      :session 过期;
+      :暂停轮询 1 小时;
+      :标记 Client 状态为 "expired";
+    else (否)
+    endif
+  repeat while (服务运行中?) is (yes)
+  ->no;
+  :保存同步游标;
+  stop
+fork again
+  :HTTPServer 请求处理循环;
+  repeat
+    :接收 HTTP 请求;
+    switch (路由匹配)
+    case (管理后台路由 - ClientAuth)
+      :ClientAuth 验证 JWT;
+      if (认证通过?) then (yes)
+        switch (具体路由)
+        case (POST /api/auth/register)
+          :AccountService.register();
+        case (POST /api/auth/login)
+          :AccountService.login() → JWT;
+        case (POST /api/user/password)
+          :AccountService.changePassword();
+        case (POST /api/client/create)
+          :ClientService.createClient();
+          :返回二维码;
+        case (GET /api/client/status)
+          :ClientService.pollClientStatus();
+        case (DELETE /api/client/:id)
+          :ClientService.deleteClient();
+        case (POST /api/application)
+          :ApplicationService.createApplication();
+        case (GET /api/application)
+          :ApplicationService.getApplications();
+        case (DELETE /api/application/:id)
+          :ApplicationService.deleteApplication();
+        case (GET /api/message)
+          :MessageService.getMessages();
+        case (DELETE /api/message/:id)
+          :MessageService.deleteMessage();
+        endswitch
+      else (失败)
+        :返回 401;
+      endif
+    case (推送 API 路由 - ApplicationAuth)
+      :ApplicationAuth 验证 Application Token;
+      if (认证通过?) then (yes)
+        switch (具体路由)
+        case (POST /api/message)
+          :MessageService.createMessage();
+          :遍历用户所有 Client;
+          :WeixinApiClient.sendMessage();
+          :记录 messages;
+          :返回发送结果;
+        endswitch
+      else (失败)
+        :返回 401;
+      endif
+    case (其他)
+      :返回 404;
+    endswitch
+  repeat while (服务运行中?) is (yes)
+  ->no;
+  stop
+end fork
+
+:接收到 SIGTERM;
+
+:停止 WeixinMonitor;
+:保存同步游标;
+:关闭 HTTPServer;
+:关闭数据库连接;
+
+stop
+
+@enduml

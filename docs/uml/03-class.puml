@@ -1,0 +1,205 @@
+@startuml WeClawBotNotify_Class
+
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+
+title WeClawBotNotify V1 - 类图\n(单用户 · 微信通知推送)
+
+package "auth (账户服务)" <<Service>> {
+
+  class AccountService {
+    - db: *sql.DB
+    + register(username: string, password: string): error
+    + login(username: string, password: string): (string, error)
+    + changePassword(userId: int64, oldPwd: string, newPwd: string): error
+    + verifyJWT(token: string): (int64, error)
+    + getUserById(id: int64): User
+    - hashPassword(pwd: string): string
+    - checkPassword(pwd: string, hash: string): bool
+  }
+
+  class User {
+    + id: int64
+    + username: string
+    + passwordHash: string
+    + createdAt: time.Time
+    + updatedAt: time.Time
+  }
+
+  AccountService --> User : manages
+}
+
+package "client (Client 服务)" <<Service>> {
+
+  class ClientService {
+    - ilinkAuth: WeixinAuth
+    - accountSvc: AccountService
+    - db: *sql.DB
+    - activeSessions: Map<int64, ClientSession>
+    + createClient(userId: int64, name: string): ClientQRResult
+    + pollClientStatus(userId: int64, clientId: int64): ClientStatus
+    + bindClient(userId: int64, ilinkUserId: string): error
+    + deleteClient(userId: int64, clientId: int64): error
+    + getClients(userId: int64): Client[]
+  }
+
+  class Client {
+    + id: int64
+    + userId: int64
+    + token: string
+    + name: string
+    + ilinkUserId: string
+    + status: string
+    + createdAt: time.Time
+    + lastUsedAt: time.Time
+  }
+
+  class ClientSession {
+    + userId: int64
+    + clientId: int64
+    + qrcode: string
+    + qrcodeUrl: string
+    + startedAt: time.Time
+    + status: string
+  }
+
+  class ClientQRResult {
+    + qrcodeUrl: string
+    + clientId: int64
+  }
+
+  class ClientStatus {
+    + status: "unbound" | "pending" | "bound"
+    + ilinkUserId: string
+  }
+
+  ClientService --> Client : manages
+  ClientService --> ClientSession : manages
+  ClientService ..> ClientQRResult : returns
+  ClientService ..> ClientStatus : returns
+}
+
+package "application (Application 服务)" <<Service>> {
+
+  class ApplicationService {
+    - db: *sql.DB
+    + createApplication(userId: int64, name: string, desc: string): Application
+    + getApplications(userId: int64): Application[]
+    + deleteApplication(userId: int64, appId: int64): error
+    + validateAppToken(token: string): (int64, error)
+    - generateAppToken(): string
+    - hashToken(token: string): string
+  }
+
+  class Application {
+    + id: int64
+    + userId: int64
+    + token: string
+    + name: string
+    + description: string
+    + defaultPriority: int
+    + createdAt: time.Time
+    + lastUsedAt: time.Time
+  }
+
+  ApplicationService --> Application : manages
+}
+
+package "message (Message 服务)" <<Service>> {
+
+  class MessageService {
+    - ilinkClient: WeixinApiClient
+    - clientSvc: ClientService
+    - appSvc: ApplicationService
+    - db: *sql.DB
+    + createMessage(appId: int64, title: string, text: string, priority: int): Message
+    + getMessages(userId: int64, limit: int, since: int64): Message[]
+    + deleteMessage(userId: int64, msgId: int64): error
+    - pushToAllClients(userId: int64, msg: Message): void
+  }
+
+  class Message {
+    + id: int64
+    + applicationId: int64
+    + title: string
+    + message: string
+    + priority: int
+    + date: time.Time
+  }
+
+  MessageService --> Message : manages
+}
+
+package "ilink (微信协议层)" <<Protocol>> {
+
+  class WeixinApiClient {
+    - baseUrl: string
+    - token: string
+    + getUpdates(req: GetUpdatesReq): GetUpdatesResp
+    + sendMessage(req: SendMessageReq): SendMessageResp
+    + getConfig(userId: string, ctxToken: string): GetConfigResp
+    + sendTyping(req: SendTypingReq): void
+  }
+
+  class WeixinMonitor {
+    - client: WeixinApiClient
+    - getUpdatesBuf: string
+    + start(opts: MonitorOpts): void
+    - pollLoop(): void
+  }
+
+  class WeixinAuth {
+    + fetchQRCode(botType: string): QRCodeResponse
+    + pollQRStatus(qrcode: string): StatusResponse
+  }
+
+  WeixinMonitor --> WeixinApiClient : uses
+}
+
+package "server (HTTP服务)" <<Gateway>> {
+
+  class HTTPServer {
+    - port: number
+    - accountSvc: AccountService
+    - clientSvc: ClientService
+    - appSvc: ApplicationService
+    - msgSvc: MessageService
+    + start(): void
+    + stop(): void
+    - handleRegister(req: Request): Response
+    - handleLogin(req: Request): Response
+    - handleCreateClient(req: Request): Response
+    - handleCreateApplication(req: Request): Response
+    - handleCreateMessage(req: Request): Response
+    - handleHealth(req: Request): Response
+  }
+
+  class ClientAuth {
+    - accountSvc: AccountService
+    + authenticate(req: Request): (int64, bool)
+  }
+
+  class ApplicationAuth {
+    - appSvc: ApplicationService
+    + authenticate(req: Request): (int64, bool)
+  }
+
+  HTTPServer --> ClientAuth : 管理后台鉴权
+  HTTPServer --> ApplicationAuth : 推送API鉴权
+}
+
+User "1" --> "0..*" Client : has
+User "1" --> "0..*" Application : has
+Application "1" --> "0..*" Message : has
+
+MessageService --> WeixinApiClient : sends via
+MessageService --> ClientService : queries clients
+
+ClientService --> WeixinAuth : 获取二维码
+
+HTTPServer --> AccountService : 注册/登录
+HTTPServer --> ClientService : Client管理
+HTTPServer --> ApplicationService : Application管理
+HTTPServer --> MessageService : 推送/查询
+
+@enduml

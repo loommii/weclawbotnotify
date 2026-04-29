@@ -1,0 +1,94 @@
+@startuml WeClawBotNotify_NotifySequence
+
+title WeClawBotNotify V1 - 推送通知 (Create Message) 序列图
+
+actor "外部系统\n(CI/CD/监控)" as Ext
+participant "server/HTTPServer" as API
+participant "middleware/ApplicationAuth" as AppAuth
+participant "application/ApplicationService" as AppSvc
+participant "message/MessageService" as MsgSvc
+participant "client/ClientService" as ClientSvc
+participant "ilink/WeixinApiClient" as ILClient
+participant "SQLite" as DB
+participant "微信 iLink 服务器" as WeChat
+actor "用户微信" as UserWeChat
+
+Ext -> API : POST /api/message\n{ title, message, priority }\nAuthorization: Bearer {appToken}
+activate API
+
+API -> AppAuth : authenticate(request)
+activate AppAuth
+
+AppAuth -> AppSvc : validateAppToken(appToken)
+activate AppSvc
+AppSvc -> DB : SELECT user_id FROM applications\nWHERE token = ?
+activate DB
+DB --> AppSvc : user_id | null
+deactivate DB
+
+alt Token 无效
+  AppSvc --> AppAuth : (0, error)
+  AppAuth --> API : 未认证
+  API --> Ext : 401 Unauthorized
+  deactivate AppAuth
+  deactivate API
+  return
+else Token 有效
+  AppSvc -> DB : UPDATE applications\nSET last_used_at = NOW()\nWHERE id = ?
+  AppSvc --> AppAuth : (userId, appId, nil)
+  deactivate AppSvc
+end
+
+AppAuth --> API : authenticated(userId, appId)
+deactivate AppAuth
+
+API -> MsgSvc : createMessage(appId, title, text, priority)
+activate MsgSvc
+
+MsgSvc -> DB : INSERT INTO messages\n(application_id, title, message, priority, date)\nVALUES (?, ?, ?, ?, ?)
+activate DB
+DB --> MsgSvc : messageId
+deactivate DB
+
+MsgSvc -> ClientSvc : getClients(userId)
+activate ClientSvc
+ClientSvc -> DB : SELECT * FROM clients\nWHERE user_id = ? AND status = "bound"
+activate DB
+DB --> ClientSvc : Client[]
+deactivate DB
+ClientSvc --> MsgSvc : Client[]
+deactivate ClientSvc
+
+alt 无可用 Client
+  MsgSvc --> API : Error: no client available
+  API --> Ext : 403 No client bound
+  deactivate MsgSvc
+  deactivate API
+  return
+end
+
+loop 遍历用户所有 Client
+  MsgSvc -> ILClient : sendMessage({\n  to_user_id: client.ilinkUserId,\n  text: title + ": " + message,\n  context_token: ""\n})
+  note right
+    context_token 为空
+    独立消息，非对话回复
+  end note
+
+  activate ILClient
+  ILClient -> WeChat : POST /ilink/bot/sendmessage\nAuthorization: Bearer {bot_token}
+  activate WeChat
+  WeChat --> ILClient : { ret: 0 }
+  deactivate WeChat
+  ILClient --> MsgSvc : success
+  deactivate ILClient
+end
+
+MsgSvc --> API : Message { id, status: "ok" }
+deactivate MsgSvc
+
+API --> Ext : 200 OK\n{ id, title, message, priority, date }
+deactivate API
+
+WeChat -> UserWeChat : 推送通知到微信
+
+@enduml

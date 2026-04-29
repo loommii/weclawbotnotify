@@ -1,0 +1,132 @@
+@startuml WeClawBotNotify_ApplicationSequence
+
+title WeClawBotNotify V1 - Application 管理序列图
+
+actor "用户" as User
+participant "Web 管理后台\n(浏览器)" as Web
+participant "server/HTTPServer" as API
+participant "middleware/ClientAuth" as ClientAuth
+participant "auth/AccountService" as AccountSvc
+participant "application/ApplicationService" as AppSvc
+participant "SQLite" as DB
+
+== 创建 Application ==
+
+User -> Web : 点击"创建 Application"\n输入名称 (如 "Jenkins CI")\n描述 (如 "CI/CD 构建通知")
+activate Web
+
+Web -> API : POST /api/application\n{ name: "Jenkins CI",\n  description: "CI/CD 构建通知" }\nAuthorization: Bearer {jwt}
+activate API
+
+API -> ClientAuth : authenticate(request)
+activate ClientAuth
+ClientAuth -> AccountSvc : verifyJWT(jwt)
+activate AccountSvc
+AccountSvc --> ClientAuth : (userId, nil)
+deactivate AccountSvc
+ClientAuth --> API : authenticated(userId)
+deactivate ClientAuth
+
+API -> AppSvc : createApplication(userId, name, desc)
+activate AppSvc
+
+AppSvc -> AppSvc : generateAppToken()\n生成随机 Token (如 app_xxx...)
+
+AppSvc -> AppSvc : hashToken(token)\n存储 hash 而非明文
+
+AppSvc -> DB : INSERT INTO applications\n(user_id, token, name, description, created_at)\nVALUES (?, ?, ?, ?, ?)
+activate DB
+DB --> AppSvc : appId
+deactivate DB
+
+AppSvc --> API : Application { id, token (明文仅此一次), name, description }
+note right
+  Token 明文仅在创建时返回一次
+  之后只存储 hash
+  用户必须妥善保存
+end note
+deactivate AppSvc
+
+API --> Web : 200 OK\n{ id, token: "app_xxx...", name, description, createdAt }
+deactivate API
+
+Web --> User : ✅ Application 创建成功\n⚠️ 请立即复制保存\nToken 仅显示一次！
+deactivate Web
+
+== 查看 Application 列表 ==
+
+User -> Web : 查看 Application 管理页面
+activate Web
+
+Web -> API : GET /api/application\nAuthorization: Bearer {jwt}
+activate API
+
+API -> ClientAuth : authenticate(request)
+activate ClientAuth
+ClientAuth --> API : authenticated(userId)
+deactivate ClientAuth
+
+API -> AppSvc : getApplications(userId)
+activate AppSvc
+
+AppSvc -> DB : SELECT id, name, description,\n  default_priority, created_at, last_used_at\nFROM applications\nWHERE user_id = ?
+activate DB
+DB --> AppSvc : rows
+deactivate DB
+
+AppSvc --> API : Application[]\n[ { id, name, description, createdAt, lastUsedAt } ]
+note right
+  不返回 token 明文
+  仅返回元信息
+end note
+deactivate AppSvc
+
+API --> Web : 200 OK\n{ applications: [...] }
+deactivate API
+
+Web --> User : 显示 Application 列表\n(名称、描述、创建时间、最后使用时间)
+deactivate Web
+
+== 删除 Application ==
+
+User -> Web : 点击"删除"某个Application
+activate Web
+
+Web -> API : DELETE /api/application/:id\nAuthorization: Bearer {jwt}
+activate API
+
+API -> ClientAuth : authenticate(request)
+activate ClientAuth
+ClientAuth --> API : authenticated(userId)
+deactivate ClientAuth
+
+API -> AppSvc : deleteApplication(userId, appId)
+activate AppSvc
+
+AppSvc -> DB : DELETE FROM applications\nWHERE id = ? AND user_id = ?
+activate DB
+DB --> AppSvc : rowsAffected
+deactivate DB
+
+alt Application 不存在或不属于该用户
+  AppSvc --> API : Error: application not found
+  API --> Web : 404 Application not found
+else 删除成功
+  AppSvc --> API : nil
+  API --> Web : 200 OK
+end
+deactivate AppSvc
+
+deactivate API
+
+Web --> User : ✅ Application 已删除\n使用此Token的外部系统将无法再调用API
+deactivate Web
+
+note over User, DB
+  Application Token 用途：
+  外部系统调用 POST /api/message 时
+  在 Authorization 头携带 Bearer {appToken}
+  ApplicationService.validateAppToken() 验证并提取 userId
+end note
+
+@enduml

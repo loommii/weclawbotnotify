@@ -1,0 +1,107 @@
+@startuml WeClawBotNotify_Deployment
+
+title WeClawBotNotify V1 - 部署架构图
+
+skinparam componentStyle uml2
+skinparam linetype ortho
+
+node "服务器" as Server {
+
+  package "WeClawBotNotify" as App {
+    component [HTTPServer\n(:8080)] as HTTP
+    component [WeixinMonitor\n(长轮询协程)] as Monitor
+    component [WeixinApiClient] as Client
+    component [AccountService] as AccountSvc
+    component [ClientService] as ClientSvc
+    component [ApplicationService] as AppSvc
+    component [MessageService] as MsgSvc
+    component [WeixinAuth] as Auth
+  }
+
+  database "SQLite" as DB {
+    folder "数据表" {
+      artifact "users" as UsersTable
+      artifact "clients" as ClientsTable
+      artifact "applications" as AppsTable
+      artifact "messages" as MessagesTable
+    }
+  }
+
+  folder "前端静态资源" as Static {
+    artifact "index.html" as IndexHTML
+    artifact "assets/" as Assets
+  }
+}
+
+cloud "微信 iLink 服务" as WeChat {
+  [ilinkai.weixin.qq.com\n(主 API)] as WeChatAPI
+}
+
+node "用户浏览器" as Browser {
+  component [管理后台页面] as WebUI
+}
+
+node "外部系统" as External {
+  component [CI/CD\n(Jenkins/GitHub Actions)] as CI
+  component [监控系统\n(Prometheus/Grafana)] as MonitorSys
+  component [告警系统\n(AlertManager)] as AlertSys
+  component [自定义脚本] as Script
+}
+
+node "用户" as User {
+  component [手机微信] as UserWeChat
+  component [浏览器] as UserBrowser
+}
+
+HTTP ..> Static : 服务前端
+WebUI --> HTTP : HTTPS\n管理后台操作
+UserBrowser --> HTTP : HTTPS\n管理后台操作
+
+HTTP --> AccountSvc : 注册/登录/改密
+HTTP --> ClientSvc : Client管理
+HTTP --> AppSvc : Application管理
+HTTP --> MsgSvc : 推送/查询
+HTTP --> Auth : Client创建(二维码)
+
+AccountSvc --> DB : 读写 users
+ClientSvc --> DB : 读写 clients
+AppSvc --> DB : 读写 applications
+MsgSvc --> DB : 读写 messages
+MsgSvc --> Client : sendMessage
+Auth --> DB : 读写 bot_credentials
+
+Monitor --> Client : getUpdates
+Client --> WeChatAPI : HTTPS
+
+UserWeChat --> WeChatAPI : 扫码绑定 Client
+
+CI --> HTTP : POST /api/message\nBearer {appToken}
+MonitorSys --> HTTP : POST /api/message\nBearer {appToken}
+AlertSys --> HTTP : POST /api/message\nBearer {appToken}
+Script --> HTTP : POST /api/message\nBearer {appToken}
+
+WeChatAPI --> UserWeChat : 推送通知
+
+note right of App
+  单实例部署
+  Go 二进制 + SQLite
+  前端嵌入二进制或独立部署
+  环境变量配置 (端口/密钥等)
+  V1 仅1个用户
+end note
+
+note right of External
+  所有外部系统通过
+  HTTP API + Application Token
+  调用推送接口
+  Token 由用户在管理后台创建
+end note
+
+note left of User
+  V1 仅1个用户
+  用户通过管理后台注册
+  创建 Client 绑定微信
+  创建 Application 生成推送Token
+end note
+
+@enduml

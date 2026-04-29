@@ -1,0 +1,934 @@
+basePath: /api
+consumes:
+- application/json
+host: localhost:48750
+info:
+  title: WeClawBotNotify API
+  version: v1
+paths:
+  /api/application/{id}:
+    delete:
+      consumes:
+      - application/x-www-form-urlencoded
+      operationId: applicationDeleteApplication
+      parameters:
+      - description: 应用 ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: ""
+          schema:
+            properties:
+              code:
+                description: business code
+                example: 0
+                type: integer
+              data:
+                properties:
+                  code:
+                    description: 响应码
+                    type: integer
+                  msg:
+                    description: 响应消息
+                    type: string
+                type: object
+              msg:
+                description: business message
+                example: ok
+                type: string
+            type: object
+      schemes:
+      - https
+      security:
+      - ClientAuth: []
+      summary: DeleteApplication
+      tags:
+      - 应用管理
+  /api/application/create:
+    post:
+      consumes:
+      - application/json
+      operationId: applicationCreateApplication
+      parameters:
+      - in: body
+        name: body
+        required: true
+        schema:
+          properties:
+            description:
+              description: 应用描述
+              type: string
+            name:
+              description: 应用名称
+              type: string
+          required:
+          - name
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: ""
+          schema:
+            properties:
+              code:
+                description: business code
+                example: 0
+                type: integer
+              data:
+                properties:
+                  code:
+                    description: 响应码
+                    type: integer
+                  data:
+                    description: 应用数据
+                    properties:
+                      created_at:
+                        description: 创建时间
+                        type: string
+                      id:
+                        description: 应用 ID
+                        type: integer
+                      name:
+                        description: 应用名称
+                        type: string
+                      token:
+                        description: 应用 Token（用于推送鉴权）
+                        type: string
+                    required:
+                    - id
+                    - token
+                    - name
+                    - created_at
+                    type: object
+                  msg:
+                    description: 响应消息
+                    type: string
+                type: object
+              msg:
+                description: business message
+                example: ok
+                type: string
+            type: object
+      schemes:
+      - https
+      security:
+      - ClientAuth: []
+      summary: CreateApplication
+      tags:
+      - 应用管理
+  /api/application/list:
+    get:
+      operationId: applicationListApplications
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: ""
+          schema:
+            properties:
+              code:
+                description: business code
+                example: 0
+                type: integer
+              data:
+                properties:
+                  code:
+                    description: 响应码
+                    type: integer
+                  data:
+                    description: 应用列表
+                    items:
+                      properties:
+                        created_at:
+                          description: 创建时间
+                          type: string
+                        description:
+                          description: 应用描述
+                          type: string
+                        id:
+                          description: 应用 ID
+                          type: integer
+                        last_used_at:
+                          description: 最后使用时间
+                          type: string
+                        name:
+                          description: 应用名称
+                          type: string
+                      required:
+                      - id
+                      - name
+                      - description
+                      - created_at
+                      type: object
+                    type: array
+                  msg:
+                    description: 响应消息
+                    type: string
+                type: object
+              msg:
+                description: business message
+                example: ok
+                type: string
+            type: object
+      schemes:
+      - https
+      security:
+      - ClientAuth: []
+      summary: ListApplications
+      tags:
+      - 应用管理
+  /api/auth/login:
+    post:
+      consumes:
+      - application/json
+      operationId: authLogin
+      parameters:
+      - in: body
+        name: body
+        required: true
+        schema:
+          properties:
+            password:
+              description: 密码
+              type: string
+            username:
+              description: 用户名
+              type: string
+          required:
+          - username
+          - password
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: ""
+          schema:
+            properties:
+              code:
+                description: business code
+                example: 0
+                type: integer
+              data:
+                properties:
+                  code:
+                    description: 响应码
+                    type: integer
+                  data:
+                    description: 登录数据
+                    properties:
+                      token:
+                        description: JWT 令牌
+                        type: string
+                      user:
+                        description: 用户信息
+                        properties:
+                          created_at:
+                            description: 创建时间
+                            type: string
+                          id:
+                            description: 用户 ID
+                            type: integer
+                          username:
+                            description: 用户名
+                            type: string
+                        required:
+                        - id
+                        - username
+                        - created_at
+                        type: object
+                    required:
+                    - token
+                    - user
+                    type: object
+                  msg:
+                    description: 响应消息
+                    type: string
+                type: object
+              msg:
+                description: business message
+                example: ok
+                type: string
+            type: object
+      schemes:
+      - https
+      summary: Login
+      tags:
+      - 认证
+  /api/auth/register:
+    post:
+      consumes:
+      - application/json
+      operationId: authRegister
+      parameters:
+      - in: body
+        name: body
+        required: true
+        schema:
+          properties:
+            password:
+              description: 密码
+              type: string
+            username:
+              description: 用户名
+              type: string
+          required:
+          - username
+          - password
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: ""
+          schema:
+            properties:
+              code:
+                description: business code
+                example: 0
+                type: integer
+              data:
+                properties:
+                  code:
+                    description: 响应码
+                    type: integer
+                  data:
+                    description: 登录数据
+                    properties:
+                      token:
+                        description: JWT 令牌
+                        type: string
+                      user:
+                        description: 用户信息
+                        properties:
+                          created_at:
+                            description: 创建时间
+                            type: string
+                          id:
+                            description: 用户 ID
+                            type: integer
+                          username:
+                            description: 用户名
+                            type: string
+                        required:
+                        - id
+                        - username
+                        - created_at
+                        type: object
+                    required:
+                    - token
+                    - user
+                    type: object
+                  msg:
+                    description: 响应消息
+                    type: string
+                type: object
+              msg:
+                description: business message
+                example: ok
+                type: string
+            type: object
+      schemes:
+      - https
+      summary: Register
+      tags:
+      - 认证
+  /api/client/{id}:
+    delete:
+      consumes:
+      - application/x-www-form-urlencoded
+      operationId: clientDeleteClient
+      parameters:
+      - description: 客户端 ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: ""
+          schema:
+            properties:
+              code:
+                description: business code
+                example: 0
+                type: integer
+              data:
+                properties:
+                  code:
+                    description: 响应码
+                    type: integer
+                  msg:
+                    description: 响应消息
+                    type: string
+                type: object
+              msg:
+                description: business message
+                example: ok
+                type: string
+            type: object
+      schemes:
+      - https
+      security:
+      - ClientAuth: []
+      summary: DeleteClient
+      tags:
+      - 客户端管理
+  /api/client/create:
+    post:
+      consumes:
+      - application/json
+      operationId: clientCreateClient
+      parameters:
+      - in: body
+        name: body
+        required: true
+        schema:
+          properties:
+            name:
+              description: 客户端名称
+              type: string
+          required:
+          - name
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: ""
+          schema:
+            properties:
+              code:
+                description: business code
+                example: 0
+                type: integer
+              data:
+                properties:
+                  code:
+                    description: 响应码
+                    type: integer
+                  data:
+                    description: 二维码数据
+                    properties:
+                      client_id:
+                        description: 客户端 ID
+                        type: integer
+                      qrcode_url:
+                        description: 二维码链接
+                        type: string
+                    required:
+                    - client_id
+                    - qrcode_url
+                    type: object
+                  msg:
+                    description: 响应消息
+                    type: string
+                type: object
+              msg:
+                description: business message
+                example: ok
+                type: string
+            type: object
+      schemes:
+      - https
+      security:
+      - ClientAuth: []
+      summary: CreateClient
+      tags:
+      - 客户端管理
+  /api/client/list:
+    get:
+      operationId: clientListClients
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: ""
+          schema:
+            properties:
+              code:
+                description: business code
+                example: 0
+                type: integer
+              data:
+                properties:
+                  code:
+                    description: 响应码
+                    type: integer
+                  data:
+                    description: 客户端列表
+                    items:
+                      properties:
+                        created_at:
+                          description: 创建时间
+                          type: string
+                        id:
+                          description: 客户端 ID
+                          type: integer
+                        ilink_user_id:
+                          description: iLink 用户 ID
+                          type: string
+                        name:
+                          description: 客户端名称
+                          type: string
+                        status:
+                          description: 状态
+                          type: string
+                      required:
+                      - id
+                      - name
+                      - status
+                      - created_at
+                      type: object
+                    type: array
+                  msg:
+                    description: 响应消息
+                    type: string
+                type: object
+              msg:
+                description: business message
+                example: ok
+                type: string
+            type: object
+      schemes:
+      - https
+      security:
+      - ClientAuth: []
+      summary: ListClients
+      tags:
+      - 客户端管理
+  /api/client/status:
+    get:
+      operationId: clientPollClientStatus
+      parameters:
+      - description: 客户端 ID
+        in: query
+        name: client_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: ""
+          schema:
+            properties:
+              code:
+                description: business code
+                example: 0
+                type: integer
+              data:
+                properties:
+                  code:
+                    description: 响应码
+                    type: integer
+                  data:
+                    description: 状态数据
+                    properties:
+                      ilink_user_id:
+                        description: iLink 用户 ID（连接后返回）
+                        type: string
+                      status:
+                        description: 状态：pending/connected/disconnected
+                        type: string
+                    required:
+                    - status
+                    type: object
+                  msg:
+                    description: 响应消息
+                    type: string
+                type: object
+              msg:
+                description: business message
+                example: ok
+                type: string
+            type: object
+      schemes:
+      - https
+      security:
+      - ClientAuth: []
+      summary: PollClientStatus
+      tags:
+      - 客户端管理
+  /api/health:
+    get:
+      operationId: healthHealth
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: ""
+          schema:
+            properties:
+              code:
+                description: business code
+                example: 0
+                type: integer
+              data:
+                properties:
+                  message:
+                    description: 响应消息，e.g. "ok"
+                    type: string
+                  serviceName:
+                    description: 服务名称
+                    type: string
+                  timestamp:
+                    description: 服务器当前时间戳
+                    type: integer
+                type: object
+              msg:
+                description: business message
+                example: ok
+                type: string
+            type: object
+      schemes:
+      - https
+      summary: Health
+      tags:
+      - 健康检查
+  /api/message/{id}:
+    delete:
+      consumes:
+      - application/x-www-form-urlencoded
+      operationId: messageDeleteMessage
+      parameters:
+      - description: 消息 ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: ""
+          schema:
+            properties:
+              code:
+                description: business code
+                example: 0
+                type: integer
+              data:
+                properties:
+                  code:
+                    description: 响应码
+                    type: integer
+                  msg:
+                    description: 响应消息
+                    type: string
+                type: object
+              msg:
+                description: business message
+                example: ok
+                type: string
+            type: object
+      schemes:
+      - https
+      security:
+      - ClientAuth: []
+      summary: DeleteMessage
+      tags:
+      - 消息管理
+  /api/message/list:
+    get:
+      operationId: messageListMessages
+      parameters:
+      - default: 20
+        description: 每页数量，默认 20
+        example: 20
+        in: query
+        name: limit
+        required: true
+        type: integer
+      - allowEmptyValue: true
+        description: 游标，返回此 ID 之前的消息
+        in: query
+        name: since
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: ""
+          schema:
+            properties:
+              code:
+                description: business code
+                example: 0
+                type: integer
+              data:
+                properties:
+                  code:
+                    description: 响应码
+                    type: integer
+                  data:
+                    description: 消息列表
+                    items:
+                      properties:
+                        application_id:
+                          description: 所属应用 ID
+                          type: integer
+                        date:
+                          description: 消息日期
+                          type: string
+                        id:
+                          description: 消息 ID
+                          type: integer
+                        message:
+                          description: 消息内容
+                          type: string
+                        priority:
+                          description: 优先级
+                          type: integer
+                        title:
+                          description: 消息标题
+                          type: string
+                      required:
+                      - id
+                      - application_id
+                      - title
+                      - message
+                      - priority
+                      - date
+                      type: object
+                    type: array
+                  msg:
+                    description: 响应消息
+                    type: string
+                type: object
+              msg:
+                description: business message
+                example: ok
+                type: string
+            type: object
+      schemes:
+      - https
+      security:
+      - ClientAuth: []
+      summary: ListMessages
+      tags:
+      - 消息管理
+  /api/message/push:
+    post:
+      consumes:
+      - application/json
+      operationId: messageCreateMessage
+      parameters:
+      - in: body
+        name: body
+        required: true
+        schema:
+          properties:
+            message:
+              description: 消息内容
+              type: string
+            priority:
+              description: 优先级
+              type: integer
+            title:
+              description: 消息标题
+              type: string
+          required:
+          - message
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: ""
+          schema:
+            properties:
+              code:
+                description: business code
+                example: 0
+                type: integer
+              data:
+                properties:
+                  code:
+                    description: 响应码
+                    type: integer
+                  data:
+                    description: 消息数据
+                    properties:
+                      date:
+                        description: 消息日期
+                        type: string
+                      id:
+                        description: 消息 ID
+                        type: integer
+                      message:
+                        description: 消息内容
+                        type: string
+                      priority:
+                        description: 优先级
+                        type: integer
+                      title:
+                        description: 消息标题
+                        type: string
+                    required:
+                    - id
+                    - title
+                    - message
+                    - priority
+                    - date
+                    type: object
+                  msg:
+                    description: 响应消息
+                    type: string
+                type: object
+              msg:
+                description: business message
+                example: ok
+                type: string
+            type: object
+      schemes:
+      - https
+      security:
+      - ApplicationAuth: []
+      summary: CreateMessage
+      tags:
+      - 消息推送
+  /api/user/password:
+    post:
+      consumes:
+      - application/json
+      operationId: userChangePassword
+      parameters:
+      - in: body
+        name: body
+        required: true
+        schema:
+          properties:
+            new_password:
+              description: 新密码
+              type: string
+            old_password:
+              description: 旧密码
+              type: string
+          required:
+          - old_password
+          - new_password
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: ""
+          schema:
+            properties:
+              code:
+                description: business code
+                example: 0
+                type: integer
+              data:
+                properties:
+                  code:
+                    description: 响应码
+                    type: integer
+                  msg:
+                    description: 响应消息
+                    type: string
+                type: object
+              msg:
+                description: business message
+                example: ok
+                type: string
+            type: object
+      schemes:
+      - https
+      security:
+      - ClientAuth: []
+      summary: ChangePassword
+      tags:
+      - 用户
+  /api/user/profile:
+    get:
+      operationId: userGetProfile
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: ""
+          schema:
+            properties:
+              code:
+                description: business code
+                example: 0
+                type: integer
+              data:
+                properties:
+                  code:
+                    description: 响应码
+                    type: integer
+                  data:
+                    description: 登录数据
+                    properties:
+                      token:
+                        description: JWT 令牌
+                        type: string
+                      user:
+                        description: 用户信息
+                        properties:
+                          created_at:
+                            description: 创建时间
+                            type: string
+                          id:
+                            description: 用户 ID
+                            type: integer
+                          username:
+                            description: 用户名
+                            type: string
+                        required:
+                        - id
+                        - username
+                        - created_at
+                        type: object
+                    required:
+                    - token
+                    - user
+                    type: object
+                  msg:
+                    description: 响应消息
+                    type: string
+                type: object
+              msg:
+                description: business message
+                example: ok
+                type: string
+            type: object
+      schemes:
+      - https
+      security:
+      - ClientAuth: []
+      summary: GetProfile
+      tags:
+      - 用户
+produces:
+- application/json
+schemes:
+- http
+securityDefinitions:
+  ApplicationAuth:
+    description: 应用 Token，用于外部系统推送鉴权
+    in: header
+    name: X-App-Token
+    type: apiKey
+  ClientAuth:
+    description: 客户端 JWT 令牌，格式：Bearer {token}
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"
+x-date: "2026-04-29 21:02:50"
+x-description: This is a goctl generated swagger file.
+x-github: https://github.com/zeromicro/go-zero
+x-go-zero-doc: https://go-zero.dev/
+x-goctl-version: 1.10.1

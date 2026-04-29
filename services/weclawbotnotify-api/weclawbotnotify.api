@@ -1,202 +1,247 @@
 syntax = "v1"
 
 info (
-	title:   "WeClawBotNotify API"
-	desc:    "微信通知推送系统 API"
-	author:  "weclawbotnotify"
-	version: "v1"
+	title:         "WeClawBotNotify API"
+	desc:          "微信通知推送系统 API"
+	version:       "v1"
+	author:        "weclawbotnotify"
+	schemes:       "http"
+	host:          "localhost:48750"
+	basePath:      "/api"
+	consumes:      "application/json"
+	produces:      "application/json"
+	wrapCodeMsg:   true
+	securityDefinitionsFromJson: `{"ClientAuth":{"type":"apiKey","name":"Authorization","in":"header","description":"客户端 JWT 令牌，格式：Bearer {token}"},"ApplicationAuth":{"type":"apiKey","name":"X-App-Token","in":"header","description":"应用 Token，用于外部系统推送鉴权"}}`
 )
 
 // ==================== 通用类型 ====================
+
+// BaseResp 通用响应结构
 type BaseResp {
-	Code int32  `json:"code"`
-	Msg  string `json:"msg"`
+	Code int32  `json:"code"` // 响应码，0 表示成功
+	Msg  string `json:"msg"`  // 响应消息
 }
 
+// HealthResp 健康检查响应
 type HealthResp {
-	ServiceName string `json:"serviceName"`
-	Timestamp   int64  `json:"timestamp"`
-	Message     string `json:"message"`
+	ServiceName string `json:"serviceName"` // 服务名称
+	Timestamp   int64  `json:"timestamp"`   // 服务器当前时间戳
+	Message     string `json:"message"`     // 响应消息，e.g. "ok"
 }
 
 // ==================== 认证相关 ====================
 type (
+	// RegisterReq 注册请求
 	RegisterReq {
-		Username string `json:"username"`
-		Password string `json:"password"`
+		Username string `json:"username"` // 用户名
+		Password string `json:"password"` // 密码
 	}
+	// UserInfo 用户信息
 	UserInfo {
-		Id        int64  `json:"id"`
-		Username  string `json:"username"`
-		CreatedAt string `json:"created_at"`
+		Id        int64  `json:"id"`         // 用户 ID
+		Username  string `json:"username"`   // 用户名
+		CreatedAt string `json:"created_at"` // 创建时间
 	}
+	// LoginData 登录/注册返回数据
 	LoginData {
-		Token string   `json:"token"`
-		User  UserInfo `json:"user"`
+		Token string   `json:"token"` // JWT 令牌
+		User  UserInfo `json:"user"`  // 用户信息
 	}
+	// RegisterResp 注册响应
 	RegisterResp {
-		Code int32     `json:"code"`
-		Msg  string    `json:"msg"`
-		Data LoginData `json:"data"`
+		Code int32     `json:"code"` // 响应码
+		Msg  string    `json:"msg"`  // 响应消息
+		Data LoginData `json:"data"` // 登录数据
 	}
+	// LoginReq 登录请求
 	LoginReq {
-		Username string `json:"username"`
-		Password string `json:"password"`
+		Username string `json:"username"` // 用户名
+		Password string `json:"password"` // 密码
 	}
+	// LoginResp 登录响应
 	LoginResp {
-		Code int32     `json:"code"`
-		Msg  string    `json:"msg"`
-		Data LoginData `json:"data"`
+		Code int32     `json:"code"` // 响应码
+		Msg  string    `json:"msg"`  // 响应消息
+		Data LoginData `json:"data"` // 登录数据
 	}
 )
 
 // ==================== 用户相关 ====================
 type (
+	// ChangePasswordReq 修改密码请求
 	ChangePasswordReq {
-		OldPassword string `json:"old_password"`
-		NewPassword string `json:"new_password"`
+		OldPassword string `json:"old_password"` // 旧密码
+		NewPassword string `json:"new_password"` // 新密码
 	}
+	// ChangePasswordResp 修改密码响应
 	ChangePasswordResp {
-		Code int32  `json:"code"`
-		Msg  string `json:"msg"`
+		Code int32  `json:"code"` // 响应码
+		Msg  string `json:"msg"`  // 响应消息
 	}
 )
 
 // ==================== Client 相关 ====================
 type (
+	// CreateClientReq 创建客户端请求
 	CreateClientReq {
-		Name string `json:"name"`
+		Name string `json:"name"` // 客户端名称
 	}
+	// ClientQRData 客户端二维码数据
 	ClientQRData {
-		ClientId  int64  `json:"client_id"`
-		QrcodeUrl string `json:"qrcode_url"`
+		ClientId  int64  `json:"client_id"`  // 客户端 ID
+		QrcodeUrl string `json:"qrcode_url"` // 二维码链接
 	}
+	// CreateClientResp 创建客户端响应
 	CreateClientResp {
-		Code int32        `json:"code"`
-		Msg  string       `json:"msg"`
-		Data ClientQRData `json:"data"`
+		Code int32        `json:"code"` // 响应码
+		Msg  string       `json:"msg"`  // 响应消息
+		Data ClientQRData `json:"data"` // 二维码数据
 	}
+	// PollClientStatusReq 轮询客户端状态请求
 	PollClientStatusReq {
-		ClientId int64 `form:"client_id"`
+		ClientId int64 `form:"client_id"` // 客户端 ID
 	}
+	// ClientStatusData 客户端状态数据
 	ClientStatusData {
-		Status      string `json:"status"`
-		IlinkUserId string `json:"ilink_user_id,optional"`
+		Status      string `json:"status"`                 // 状态：pending/connected/disconnected
+		IlinkUserId string `json:"ilink_user_id,optional"` // iLink 用户 ID（连接后返回）
 	}
+	// PollClientStatusResp 轮询客户端状态响应
 	PollClientStatusResp {
-		Code int32            `json:"code"`
-		Msg  string           `json:"msg"`
-		Data ClientStatusData `json:"data"`
+		Code int32            `json:"code"` // 响应码
+		Msg  string           `json:"msg"`  // 响应消息
+		Data ClientStatusData `json:"data"` // 状态数据
 	}
+	// DeleteClientReq 删除客户端请求
 	DeleteClientReq {
-		Id string `path:"id"`
+		Id string `path:"id"` // 客户端 ID
 	}
+	// DeleteClientResp 删除客户端响应
 	DeleteClientResp {
-		Code int32  `json:"code"`
-		Msg  string `json:"msg"`
+		Code int32  `json:"code"` // 响应码
+		Msg  string `json:"msg"`  // 响应消息
 	}
+	// ClientInfo 客户端信息
 	ClientInfo {
-		Id          int64  `json:"id"`
-		Name        string `json:"name"`
-		Status      string `json:"status"`
-		IlinkUserId string `json:"ilink_user_id,optional"`
-		CreatedAt   string `json:"created_at"`
+		Id          int64  `json:"id"`                      // 客户端 ID
+		Name        string `json:"name"`                    // 客户端名称
+		Status      string `json:"status"`                  // 状态
+		IlinkUserId string `json:"ilink_user_id,optional"`  // iLink 用户 ID
+		CreatedAt   string `json:"created_at"`              // 创建时间
 	}
+	// ListClientsResp 客户端列表响应
 	ListClientsResp {
-		Code int32        `json:"code"`
-		Msg  string       `json:"msg"`
-		Data []ClientInfo `json:"data"`
+		Code int32        `json:"code"` // 响应码
+		Msg  string       `json:"msg"`  // 响应消息
+		Data []ClientInfo `json:"data"` // 客户端列表
 	}
 )
 
 // ==================== Application 相关 ====================
 type (
+	// CreateApplicationReq 创建应用请求
 	CreateApplicationReq {
-		Name        string `json:"name"`
-		Description string `json:"description,optional"`
+		Name        string `json:"name"`                  // 应用名称
+		Description string `json:"description,optional"`  // 应用描述
 	}
+	// ApplicationData 创建应用返回数据
 	ApplicationData {
-		Id        int64  `json:"id"`
-		Token     string `json:"token"`
-		Name      string `json:"name"`
-		CreatedAt string `json:"created_at"`
+		Id        int64  `json:"id"`         // 应用 ID
+		Token     string `json:"token"`      // 应用 Token（用于推送鉴权）
+		Name      string `json:"name"`       // 应用名称
+		CreatedAt string `json:"created_at"` // 创建时间
 	}
+	// CreateApplicationResp 创建应用响应
 	CreateApplicationResp {
-		Code int32           `json:"code"`
-		Msg  string          `json:"msg"`
-		Data ApplicationData `json:"data"`
+		Code int32           `json:"code"` // 响应码
+		Msg  string          `json:"msg"`  // 响应消息
+		Data ApplicationData `json:"data"` // 应用数据
 	}
+	// ApplicationInfo 应用信息
 	ApplicationInfo {
-		Id          int64  `json:"id"`
-		Name        string `json:"name"`
-		Description string `json:"description"`
-		CreatedAt   string `json:"created_at"`
-		LastUsedAt  string `json:"last_used_at,optional"`
+		Id          int64  `json:"id"`                      // 应用 ID
+		Name        string `json:"name"`                    // 应用名称
+		Description string `json:"description"`             // 应用描述
+		CreatedAt   string `json:"created_at"`              // 创建时间
+		LastUsedAt  string `json:"last_used_at,optional"`   // 最后使用时间
 	}
+	// ListApplicationsResp 应用列表响应
 	ListApplicationsResp {
-		Code int32             `json:"code"`
-		Msg  string            `json:"msg"`
-		Data []ApplicationInfo `json:"data"`
+		Code int32             `json:"code"` // 响应码
+		Msg  string            `json:"msg"`  // 响应消息
+		Data []ApplicationInfo `json:"data"` // 应用列表
 	}
+	// DeleteApplicationReq 删除应用请求
 	DeleteApplicationReq {
-		Id string `path:"id"`
+		Id string `path:"id"` // 应用 ID
 	}
+	// DeleteApplicationResp 删除应用响应
 	DeleteApplicationResp {
-		Code int32  `json:"code"`
-		Msg  string `json:"msg"`
+		Code int32  `json:"code"` // 响应码
+		Msg  string `json:"msg"`  // 响应消息
 	}
 )
 
 // ==================== Message 相关 ====================
 type (
+	// CreateMessageReq 创建消息请求（推送通知）
 	CreateMessageReq {
-		Title    string `json:"title,optional"`
-		Message  string `json:"message"`
-		Priority int32  `json:"priority,optional"`
+		Title    string `json:"title,optional"`   // 消息标题
+		Message  string `json:"message"`          // 消息内容
+		Priority int32  `json:"priority,optional"` // 优先级
 	}
+	// MessageData 消息数据
 	MessageData {
-		Id       int64  `json:"id"`
-		Title    string `json:"title"`
-		Message  string `json:"message"`
-		Priority int32  `json:"priority"`
-		Date     string `json:"date"`
+		Id       int64  `json:"id"`       // 消息 ID
+		Title    string `json:"title"`    // 消息标题
+		Message  string `json:"message"`  // 消息内容
+		Priority int32  `json:"priority"` // 优先级
+		Date     string `json:"date"`     // 消息日期
 	}
+	// CreateMessageResp 创建消息响应
 	CreateMessageResp {
-		Code int32       `json:"code"`
-		Msg  string      `json:"msg"`
-		Data MessageData `json:"data"`
+		Code int32       `json:"code"` // 响应码
+		Msg  string      `json:"msg"`  // 响应消息
+		Data MessageData `json:"data"` // 消息数据
 	}
+	// ListMessagesReq 消息列表请求
 	ListMessagesReq {
-		Limit int64 `form:"limit,default=20"`
-		Since int64 `form:"since,optional"`
+		Limit int64 `form:"limit,default=20"` // 每页数量，默认 20
+		Since int64 `form:"since,optional"`   // 游标，返回此 ID 之前的消息
 	}
+	// MessageInfo 消息信息
 	MessageInfo {
-		Id            int64  `json:"id"`
-		ApplicationId int64  `json:"application_id"`
-		Title         string `json:"title"`
-		Message       string `json:"message"`
-		Priority      int32  `json:"priority"`
-		Date          string `json:"date"`
+		Id            int64  `json:"id"`             // 消息 ID
+		ApplicationId int64  `json:"application_id"` // 所属应用 ID
+		Title         string `json:"title"`          // 消息标题
+		Message       string `json:"message"`        // 消息内容
+		Priority      int32  `json:"priority"`       // 优先级
+		Date          string `json:"date"`           // 消息日期
 	}
+	// ListMessagesResp 消息列表响应
 	ListMessagesResp {
-		Code int32         `json:"code"`
-		Msg  string        `json:"msg"`
-		Data []MessageInfo `json:"data"`
+		Code int32         `json:"code"` // 响应码
+		Msg  string        `json:"msg"`  // 响应消息
+		Data []MessageInfo `json:"data"` // 消息列表
 	}
+	// DeleteMessageReq 删除消息请求
 	DeleteMessageReq {
-		Id string `path:"id"`
+		Id string `path:"id"` // 消息 ID
 	}
+	// DeleteMessageResp 删除消息响应
 	DeleteMessageResp {
-		Code int32  `json:"code"`
-		Msg  string `json:"msg"`
+		Code int32  `json:"code"` // 响应码
+		Msg  string `json:"msg"`  // 响应消息
 	}
 )
 
 // ==================== 路由分组 ====================
+
 // 认证（公开，无需鉴权）
 @server (
 	prefix: /api/auth
 	group:  auth
+	tags:   "认证"
 )
 service weclawbotnotify-api {
 	@handler Register
@@ -211,6 +256,8 @@ service weclawbotnotify-api {
 	prefix:     /api/user
 	group:      user
 	middleware: ClientAuth
+	authType:   ClientAuth
+	tags:       "用户"
 )
 service weclawbotnotify-api {
 	@handler GetProfile
@@ -225,6 +272,8 @@ service weclawbotnotify-api {
 	prefix:     /api/client
 	group:      client
 	middleware: ClientAuth
+	authType:   ClientAuth
+	tags:       "客户端管理"
 )
 service weclawbotnotify-api {
 	@handler CreateClient
@@ -245,6 +294,8 @@ service weclawbotnotify-api {
 	prefix:     /api/application
 	group:      application
 	middleware: ClientAuth
+	authType:   ClientAuth
+	tags:       "应用管理"
 )
 service weclawbotnotify-api {
 	@handler CreateApplication
@@ -262,6 +313,8 @@ service weclawbotnotify-api {
 	prefix:     /api/message
 	group:      message
 	middleware: ClientAuth
+	authType:   ClientAuth
+	tags:       "消息管理"
 )
 service weclawbotnotify-api {
 	@handler ListMessages
@@ -276,6 +329,8 @@ service weclawbotnotify-api {
 	prefix:     /api/message
 	group:      message
 	middleware: ApplicationAuth
+	authType:   ApplicationAuth
+	tags:       "消息推送"
 )
 service weclawbotnotify-api {
 	@handler CreateMessage
@@ -286,9 +341,9 @@ service weclawbotnotify-api {
 @server (
 	prefix: /api
 	group:  health
+	tags:   "健康检查"
 )
 service weclawbotnotify-api {
 	@handler Health
 	get /health returns (HealthResp)
 }
-

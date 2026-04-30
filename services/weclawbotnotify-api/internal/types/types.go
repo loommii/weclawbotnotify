@@ -3,24 +3,12 @@
 
 package types
 
-type ApplicationData struct {
-	Id        int64  `json:"id"`         // 应用 ID
-	Token     string `json:"token"`      // 应用 Token（用于推送鉴权）
-	Name      string `json:"name"`       // 应用名称
-	CreatedAt string `json:"created_at"` // 创建时间
-}
-
 type ApplicationInfo struct {
 	Id          int64  `json:"id"`                    // 应用 ID
 	Name        string `json:"name"`                  // 应用名称
 	Description string `json:"description"`           // 应用描述
 	CreatedAt   string `json:"created_at"`            // 创建时间
 	LastUsedAt  string `json:"last_used_at,optional"` // 最后使用时间
-}
-
-type BaseResp struct {
-	Code int32  `json:"code"` // 响应码，0 表示成功
-	Msg  string `json:"msg"`  // 响应消息
 }
 
 type ChangePasswordReq struct {
@@ -37,16 +25,6 @@ type ClientInfo struct {
 	Status      string `json:"status"`                 // 状态
 	IlinkUserId string `json:"ilink_user_id,optional"` // iLink 用户 ID
 	CreatedAt   string `json:"created_at"`             // 创建时间
-}
-
-type ClientQRData struct {
-	ClientId  int64  `json:"client_id"`  // 客户端 ID
-	QrcodeUrl string `json:"qrcode_url"` // 二维码链接
-}
-
-type ClientStatusData struct {
-	Status      string `json:"status"`                 // 状态：pending/connected/disconnected
-	IlinkUserId string `json:"ilink_user_id,optional"` // iLink 用户 ID（连接后返回）
 }
 
 type CreateApplicationReq struct {
@@ -85,30 +63,30 @@ type CreateMessageResp struct {
 }
 
 type DeleteApplicationReq struct {
-	Id string `path:"id"` // 应用 ID
+	Id int64 `path:"id"` // 应用 ID
 }
 
 type DeleteApplicationResp struct {
 }
 
 type DeleteClientReq struct {
-	Id string `path:"id"` // 客户端 ID
+	Id int64 `path:"id"` // 客户端 ID
 }
 
 type DeleteClientResp struct {
 }
 
 type DeleteMessageReq struct {
-	Id string `path:"id"` // 消息 ID
+	Id int64 `path:"id"` // 消息 ID
 }
 
 type DeleteMessageResp struct {
 }
 
 type HealthResp struct {
-	ServiceName string `json:"serviceName"` // 服务名称
-	Timestamp   int64  `json:"timestamp"`   // 服务器当前时间戳
-	Message     string `json:"message"`     // 响应消息，e.g. "ok"
+	ServiceName string `json:"service_name"` // 服务名称
+	Timestamp   int64  `json:"timestamp"`    // 服务器当前时间戳
+	Message     string `json:"message"`      // 响应消息，e.g. "ok"
 }
 
 type ListApplicationsResp struct {
@@ -137,14 +115,6 @@ type LoginResp struct {
 	Token        string   `json:"token"`         // Access Token (15分钟过期)
 	RefreshToken string   `json:"refresh_token"` // Refresh Token (7天过期)
 	User         UserInfo `json:"user"`          // 用户信息
-}
-
-type MessageData struct {
-	Id       int64  `json:"id"`       // 消息 ID
-	Title    string `json:"title"`    // 消息标题
-	Message  string `json:"message"`  // 消息内容
-	Priority int32  `json:"priority"` // 优先级
-	Date     string `json:"date"`     // 消息日期
 }
 
 type MessageInfo struct {

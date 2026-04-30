@@ -14,15 +14,10 @@
     "version": "v1"
   },
   "host": "localhost:48750",
-  "basePath": "/api",
+  "basePath": "/",
   "paths": {
     "/api/application/create": {
       "post": {
-        "security": [
-          {
-            "ClientAuth": []
-          }
-        ],
         "consumes": [
           "application/json"
         ],
@@ -66,36 +61,21 @@
             "schema": {
               "type": "object",
               "properties": {
-                "code": {
-                  "description": "business code",
-                  "type": "integer",
-                  "example": 0
+                "created_at": {
+                  "description": "创建时间",
+                  "type": "string"
                 },
-                "data": {
-                  "type": "object",
-                  "properties": {
-                    "created_at": {
-                      "description": "创建时间",
-                      "type": "string"
-                    },
-                    "id": {
-                      "description": "应用 ID",
-                      "type": "integer"
-                    },
-                    "name": {
-                      "description": "应用名称",
-                      "type": "string"
-                    },
-                    "token": {
-                      "description": "应用 Token（用于推送鉴权）",
-                      "type": "string"
-                    }
-                  }
+                "id": {
+                  "description": "应用 ID",
+                  "type": "integer"
                 },
-                "msg": {
-                  "description": "business message",
-                  "type": "string",
-                  "example": "ok"
+                "name": {
+                  "description": "应用名称",
+                  "type": "string"
+                },
+                "token": {
+                  "description": "应用 Token（用于推送鉴权）",
+                  "type": "string"
                 }
               }
             }
@@ -105,11 +85,6 @@
     },
     "/api/application/list": {
       "get": {
-        "security": [
-          {
-            "ClientAuth": []
-          }
-        ],
         "produces": [
           "application/json"
         ],
@@ -127,55 +102,40 @@
             "schema": {
               "type": "object",
               "properties": {
-                "code": {
-                  "description": "business code",
-                  "type": "integer",
-                  "example": 0
-                },
-                "data": {
-                  "type": "object",
-                  "properties": {
-                    "list": {
-                      "description": "应用列表",
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "required": [
-                          "id",
-                          "name",
-                          "description",
-                          "created_at"
-                        ],
-                        "properties": {
-                          "created_at": {
-                            "description": "创建时间",
-                            "type": "string"
-                          },
-                          "description": {
-                            "description": "应用描述",
-                            "type": "string"
-                          },
-                          "id": {
-                            "description": "应用 ID",
-                            "type": "integer"
-                          },
-                          "last_used_at": {
-                            "description": "最后使用时间",
-                            "type": "string"
-                          },
-                          "name": {
-                            "description": "应用名称",
-                            "type": "string"
-                          }
-                        }
+                "list": {
+                  "description": "应用列表",
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": [
+                      "id",
+                      "name",
+                      "description",
+                      "created_at"
+                    ],
+                    "properties": {
+                      "created_at": {
+                        "description": "创建时间",
+                        "type": "string"
+                      },
+                      "description": {
+                        "description": "应用描述",
+                        "type": "string"
+                      },
+                      "id": {
+                        "description": "应用 ID",
+                        "type": "integer"
+                      },
+                      "last_used_at": {
+                        "description": "最后使用时间",
+                        "type": "string"
+                      },
+                      "name": {
+                        "description": "应用名称",
+                        "type": "string"
                       }
                     }
                   }
-                },
-                "msg": {
-                  "description": "business message",
-                  "type": "string",
-                  "example": "ok"
                 }
               }
             }
@@ -185,11 +145,6 @@
     },
     "/api/application/{id}": {
       "delete": {
-        "security": [
-          {
-            "ClientAuth": []
-          }
-        ],
         "consumes": [
           "application/x-www-form-urlencoded"
         ],
@@ -206,7 +161,7 @@
         "operationId": "applicationDeleteApplication",
         "parameters": [
           {
-            "type": "string",
+            "type": "integer",
             "description": "应用 ID",
             "name": "id",
             "in": "path",
@@ -217,22 +172,7 @@
           "200": {
             "description": "",
             "schema": {
-              "type": "object",
-              "properties": {
-                "code": {
-                  "description": "business code",
-                  "type": "integer",
-                  "example": 0
-                },
-                "data": {
-                  "type": "object"
-                },
-                "msg": {
-                  "description": "business message",
-                  "type": "string",
-                  "example": "ok"
-                }
-              }
+              "type": "object"
             }
           }
         }
@@ -284,51 +224,36 @@
             "schema": {
               "type": "object",
               "properties": {
-                "code": {
-                  "description": "business code",
-                  "type": "integer",
-                  "example": 0
+                "refresh_token": {
+                  "description": "Refresh Token (7天过期)",
+                  "type": "string"
                 },
-                "data": {
+                "token": {
+                  "description": "Access Token (15分钟过期)",
+                  "type": "string"
+                },
+                "user": {
+                  "description": "用户信息",
                   "type": "object",
+                  "required": [
+                    "id",
+                    "username",
+                    "created_at"
+                  ],
                   "properties": {
-                    "refresh_token": {
-                      "description": "Refresh Token (7天过期)",
+                    "created_at": {
+                      "description": "创建时间",
                       "type": "string"
                     },
-                    "token": {
-                      "description": "Access Token (15分钟过期)",
-                      "type": "string"
+                    "id": {
+                      "description": "用户 ID",
+                      "type": "integer"
                     },
-                    "user": {
-                      "description": "用户信息",
-                      "type": "object",
-                      "required": [
-                        "id",
-                        "username",
-                        "created_at"
-                      ],
-                      "properties": {
-                        "created_at": {
-                          "description": "创建时间",
-                          "type": "string"
-                        },
-                        "id": {
-                          "description": "用户 ID",
-                          "type": "integer"
-                        },
-                        "username": {
-                          "description": "用户名",
-                          "type": "string"
-                        }
-                      }
+                    "username": {
+                      "description": "用户名",
+                      "type": "string"
                     }
                   }
-                },
-                "msg": {
-                  "description": "business message",
-                  "type": "string",
-                  "example": "ok"
                 }
               }
             }
@@ -377,28 +302,13 @@
             "schema": {
               "type": "object",
               "properties": {
-                "code": {
-                  "description": "business code",
-                  "type": "integer",
-                  "example": 0
+                "refresh_token": {
+                  "description": "新的 Refresh Token (轮换)",
+                  "type": "string"
                 },
-                "data": {
-                  "type": "object",
-                  "properties": {
-                    "refresh_token": {
-                      "description": "新的 Refresh Token (轮换)",
-                      "type": "string"
-                    },
-                    "token": {
-                      "description": "新的 Access Token",
-                      "type": "string"
-                    }
-                  }
-                },
-                "msg": {
-                  "description": "business message",
-                  "type": "string",
-                  "example": "ok"
+                "token": {
+                  "description": "新的 Access Token",
+                  "type": "string"
                 }
               }
             }
@@ -452,51 +362,36 @@
             "schema": {
               "type": "object",
               "properties": {
-                "code": {
-                  "description": "business code",
-                  "type": "integer",
-                  "example": 0
+                "refresh_token": {
+                  "description": "Refresh Token (7天过期)",
+                  "type": "string"
                 },
-                "data": {
+                "token": {
+                  "description": "Access Token (15分钟过期)",
+                  "type": "string"
+                },
+                "user": {
+                  "description": "用户信息",
                   "type": "object",
+                  "required": [
+                    "id",
+                    "username",
+                    "created_at"
+                  ],
                   "properties": {
-                    "refresh_token": {
-                      "description": "Refresh Token (7天过期)",
+                    "created_at": {
+                      "description": "创建时间",
                       "type": "string"
                     },
-                    "token": {
-                      "description": "Access Token (15分钟过期)",
-                      "type": "string"
+                    "id": {
+                      "description": "用户 ID",
+                      "type": "integer"
                     },
-                    "user": {
-                      "description": "用户信息",
-                      "type": "object",
-                      "required": [
-                        "id",
-                        "username",
-                        "created_at"
-                      ],
-                      "properties": {
-                        "created_at": {
-                          "description": "创建时间",
-                          "type": "string"
-                        },
-                        "id": {
-                          "description": "用户 ID",
-                          "type": "integer"
-                        },
-                        "username": {
-                          "description": "用户名",
-                          "type": "string"
-                        }
-                      }
+                    "username": {
+                      "description": "用户名",
+                      "type": "string"
                     }
                   }
-                },
-                "msg": {
-                  "description": "business message",
-                  "type": "string",
-                  "example": "ok"
                 }
               }
             }
@@ -506,11 +401,6 @@
     },
     "/api/client/create": {
       "post": {
-        "security": [
-          {
-            "ClientAuth": []
-          }
-        ],
         "consumes": [
           "application/json"
         ],
@@ -550,28 +440,13 @@
             "schema": {
               "type": "object",
               "properties": {
-                "code": {
-                  "description": "business code",
-                  "type": "integer",
-                  "example": 0
+                "client_id": {
+                  "description": "客户端 ID",
+                  "type": "integer"
                 },
-                "data": {
-                  "type": "object",
-                  "properties": {
-                    "client_id": {
-                      "description": "客户端 ID",
-                      "type": "integer"
-                    },
-                    "qrcode_url": {
-                      "description": "二维码链接",
-                      "type": "string"
-                    }
-                  }
-                },
-                "msg": {
-                  "description": "business message",
-                  "type": "string",
-                  "example": "ok"
+                "qrcode_url": {
+                  "description": "二维码链接",
+                  "type": "string"
                 }
               }
             }
@@ -581,11 +456,6 @@
     },
     "/api/client/list": {
       "get": {
-        "security": [
-          {
-            "ClientAuth": []
-          }
-        ],
         "produces": [
           "application/json"
         ],
@@ -603,55 +473,40 @@
             "schema": {
               "type": "object",
               "properties": {
-                "code": {
-                  "description": "business code",
-                  "type": "integer",
-                  "example": 0
-                },
-                "data": {
-                  "type": "object",
-                  "properties": {
-                    "list": {
-                      "description": "客户端列表",
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "required": [
-                          "id",
-                          "name",
-                          "status",
-                          "created_at"
-                        ],
-                        "properties": {
-                          "created_at": {
-                            "description": "创建时间",
-                            "type": "string"
-                          },
-                          "id": {
-                            "description": "客户端 ID",
-                            "type": "integer"
-                          },
-                          "ilink_user_id": {
-                            "description": "iLink 用户 ID",
-                            "type": "string"
-                          },
-                          "name": {
-                            "description": "客户端名称",
-                            "type": "string"
-                          },
-                          "status": {
-                            "description": "状态",
-                            "type": "string"
-                          }
-                        }
+                "list": {
+                  "description": "客户端列表",
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": [
+                      "id",
+                      "name",
+                      "status",
+                      "created_at"
+                    ],
+                    "properties": {
+                      "created_at": {
+                        "description": "创建时间",
+                        "type": "string"
+                      },
+                      "id": {
+                        "description": "客户端 ID",
+                        "type": "integer"
+                      },
+                      "ilink_user_id": {
+                        "description": "iLink 用户 ID",
+                        "type": "string"
+                      },
+                      "name": {
+                        "description": "客户端名称",
+                        "type": "string"
+                      },
+                      "status": {
+                        "description": "状态",
+                        "type": "string"
                       }
                     }
                   }
-                },
-                "msg": {
-                  "description": "business message",
-                  "type": "string",
-                  "example": "ok"
                 }
               }
             }
@@ -661,11 +516,6 @@
     },
     "/api/client/status": {
       "get": {
-        "security": [
-          {
-            "ClientAuth": []
-          }
-        ],
         "produces": [
           "application/json"
         ],
@@ -692,28 +542,13 @@
             "schema": {
               "type": "object",
               "properties": {
-                "code": {
-                  "description": "business code",
-                  "type": "integer",
-                  "example": 0
+                "ilink_user_id": {
+                  "description": "iLink 用户 ID（连接后返回）",
+                  "type": "string"
                 },
-                "data": {
-                  "type": "object",
-                  "properties": {
-                    "ilink_user_id": {
-                      "description": "iLink 用户 ID（连接后返回）",
-                      "type": "string"
-                    },
-                    "status": {
-                      "description": "状态：pending/connected/disconnected",
-                      "type": "string"
-                    }
-                  }
-                },
-                "msg": {
-                  "description": "business message",
-                  "type": "string",
-                  "example": "ok"
+                "status": {
+                  "description": "状态：pending/connected/disconnected",
+                  "type": "string"
                 }
               }
             }
@@ -723,11 +558,6 @@
     },
     "/api/client/{id}": {
       "delete": {
-        "security": [
-          {
-            "ClientAuth": []
-          }
-        ],
         "consumes": [
           "application/x-www-form-urlencoded"
         ],
@@ -744,7 +574,7 @@
         "operationId": "clientDeleteClient",
         "parameters": [
           {
-            "type": "string",
+            "type": "integer",
             "description": "客户端 ID",
             "name": "id",
             "in": "path",
@@ -755,22 +585,7 @@
           "200": {
             "description": "",
             "schema": {
-              "type": "object",
-              "properties": {
-                "code": {
-                  "description": "business code",
-                  "type": "integer",
-                  "example": 0
-                },
-                "data": {
-                  "type": "object"
-                },
-                "msg": {
-                  "description": "business message",
-                  "type": "string",
-                  "example": "ok"
-                }
-              }
+              "type": "object"
             }
           }
         }
@@ -795,32 +610,17 @@
             "schema": {
               "type": "object",
               "properties": {
-                "code": {
-                  "description": "business code",
-                  "type": "integer",
-                  "example": 0
+                "message": {
+                  "description": "响应消息，e.g. \"ok\"",
+                  "type": "string"
                 },
-                "data": {
-                  "type": "object",
-                  "properties": {
-                    "message": {
-                      "description": "响应消息，e.g. \"ok\"",
-                      "type": "string"
-                    },
-                    "serviceName": {
-                      "description": "服务名称",
-                      "type": "string"
-                    },
-                    "timestamp": {
-                      "description": "服务器当前时间戳",
-                      "type": "integer"
-                    }
-                  }
+                "service_name": {
+                  "description": "服务名称",
+                  "type": "string"
                 },
-                "msg": {
-                  "description": "business message",
-                  "type": "string",
-                  "example": "ok"
+                "timestamp": {
+                  "description": "服务器当前时间戳",
+                  "type": "integer"
                 }
               }
             }
@@ -830,11 +630,6 @@
     },
     "/api/message/list": {
       "get": {
-        "security": [
-          {
-            "ClientAuth": []
-          }
-        ],
         "produces": [
           "application/json"
         ],
@@ -870,61 +665,46 @@
             "schema": {
               "type": "object",
               "properties": {
-                "code": {
-                  "description": "business code",
-                  "type": "integer",
-                  "example": 0
-                },
-                "data": {
-                  "type": "object",
-                  "properties": {
-                    "list": {
-                      "description": "消息列表",
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "required": [
-                          "id",
-                          "application_id",
-                          "title",
-                          "message",
-                          "priority",
-                          "date"
-                        ],
-                        "properties": {
-                          "application_id": {
-                            "description": "所属应用 ID",
-                            "type": "integer"
-                          },
-                          "date": {
-                            "description": "消息日期",
-                            "type": "string"
-                          },
-                          "id": {
-                            "description": "消息 ID",
-                            "type": "integer"
-                          },
-                          "message": {
-                            "description": "消息内容",
-                            "type": "string"
-                          },
-                          "priority": {
-                            "description": "优先级",
-                            "type": "integer"
-                          },
-                          "title": {
-                            "description": "消息标题",
-                            "type": "string"
-                          }
-                        }
+                "list": {
+                  "description": "消息列表",
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": [
+                      "id",
+                      "application_id",
+                      "title",
+                      "message",
+                      "priority",
+                      "date"
+                    ],
+                    "properties": {
+                      "application_id": {
+                        "description": "所属应用 ID",
+                        "type": "integer"
+                      },
+                      "date": {
+                        "description": "消息日期",
+                        "type": "string"
+                      },
+                      "id": {
+                        "description": "消息 ID",
+                        "type": "integer"
+                      },
+                      "message": {
+                        "description": "消息内容",
+                        "type": "string"
+                      },
+                      "priority": {
+                        "description": "优先级",
+                        "type": "integer"
+                      },
+                      "title": {
+                        "description": "消息标题",
+                        "type": "string"
                       }
                     }
                   }
-                },
-                "msg": {
-                  "description": "business message",
-                  "type": "string",
-                  "example": "ok"
                 }
               }
             }
@@ -934,11 +714,6 @@
     },
     "/api/message/push": {
       "post": {
-        "security": [
-          {
-            "ApplicationAuth": []
-          }
-        ],
         "consumes": [
           "application/json"
         ],
@@ -986,40 +761,25 @@
             "schema": {
               "type": "object",
               "properties": {
-                "code": {
-                  "description": "business code",
-                  "type": "integer",
-                  "example": 0
+                "date": {
+                  "description": "消息日期",
+                  "type": "string"
                 },
-                "data": {
-                  "type": "object",
-                  "properties": {
-                    "date": {
-                      "description": "消息日期",
-                      "type": "string"
-                    },
-                    "id": {
-                      "description": "消息 ID",
-                      "type": "integer"
-                    },
-                    "message": {
-                      "description": "消息内容",
-                      "type": "string"
-                    },
-                    "priority": {
-                      "description": "优先级",
-                      "type": "integer"
-                    },
-                    "title": {
-                      "description": "消息标题",
-                      "type": "string"
-                    }
-                  }
+                "id": {
+                  "description": "消息 ID",
+                  "type": "integer"
                 },
-                "msg": {
-                  "description": "business message",
-                  "type": "string",
-                  "example": "ok"
+                "message": {
+                  "description": "消息内容",
+                  "type": "string"
+                },
+                "priority": {
+                  "description": "优先级",
+                  "type": "integer"
+                },
+                "title": {
+                  "description": "消息标题",
+                  "type": "string"
                 }
               }
             }
@@ -1029,11 +789,6 @@
     },
     "/api/message/{id}": {
       "delete": {
-        "security": [
-          {
-            "ClientAuth": []
-          }
-        ],
         "consumes": [
           "application/x-www-form-urlencoded"
         ],
@@ -1050,7 +805,7 @@
         "operationId": "messageDeleteMessage",
         "parameters": [
           {
-            "type": "string",
+            "type": "integer",
             "description": "消息 ID",
             "name": "id",
             "in": "path",
@@ -1061,22 +816,7 @@
           "200": {
             "description": "",
             "schema": {
-              "type": "object",
-              "properties": {
-                "code": {
-                  "description": "business code",
-                  "type": "integer",
-                  "example": 0
-                },
-                "data": {
-                  "type": "object"
-                },
-                "msg": {
-                  "description": "business message",
-                  "type": "string",
-                  "example": "ok"
-                }
-              }
+              "type": "object"
             }
           }
         }
@@ -1084,11 +824,6 @@
     },
     "/api/user/password": {
       "post": {
-        "security": [
-          {
-            "ClientAuth": []
-          }
-        ],
         "consumes": [
           "application/json"
         ],
@@ -1131,22 +866,7 @@
           "200": {
             "description": "",
             "schema": {
-              "type": "object",
-              "properties": {
-                "code": {
-                  "description": "business code",
-                  "type": "integer",
-                  "example": 0
-                },
-                "data": {
-                  "type": "object"
-                },
-                "msg": {
-                  "description": "business message",
-                  "type": "string",
-                  "example": "ok"
-                }
-              }
+              "type": "object"
             }
           }
         }
@@ -1154,11 +874,6 @@
     },
     "/api/user/profile": {
       "get": {
-        "security": [
-          {
-            "ClientAuth": []
-          }
-        ],
         "produces": [
           "application/json"
         ],
@@ -1176,43 +891,28 @@
             "schema": {
               "type": "object",
               "properties": {
-                "code": {
-                  "description": "business code",
-                  "type": "integer",
-                  "example": 0
-                },
-                "data": {
+                "user": {
+                  "description": "用户信息",
                   "type": "object",
+                  "required": [
+                    "id",
+                    "username",
+                    "created_at"
+                  ],
                   "properties": {
-                    "user": {
-                      "description": "用户信息",
-                      "type": "object",
-                      "required": [
-                        "id",
-                        "username",
-                        "created_at"
-                      ],
-                      "properties": {
-                        "created_at": {
-                          "description": "创建时间",
-                          "type": "string"
-                        },
-                        "id": {
-                          "description": "用户 ID",
-                          "type": "integer"
-                        },
-                        "username": {
-                          "description": "用户名",
-                          "type": "string"
-                        }
-                      }
+                    "created_at": {
+                      "description": "创建时间",
+                      "type": "string"
+                    },
+                    "id": {
+                      "description": "用户 ID",
+                      "type": "integer"
+                    },
+                    "username": {
+                      "description": "用户名",
+                      "type": "string"
                     }
                   }
-                },
-                "msg": {
-                  "description": "business message",
-                  "type": "string",
-                  "example": "ok"
                 }
               }
             }
@@ -1221,7 +921,7 @@
       }
     }
   },
-  "x-date": "2026-04-30 22:03:22",
+  "x-date": "2026-05-01 01:25:45",
   "x-description": "This is a goctl generated swagger file.",
   "x-github": "https://github.com/zeromicro/go-zero",
   "x-go-zero-doc": "https://go-zero.dev/",

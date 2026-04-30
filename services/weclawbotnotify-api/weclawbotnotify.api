@@ -1,28 +1,20 @@
 syntax = "v1"
 
 info (
-	title:                       "WeClawBotNotify API"
-	desc:                        "微信通知推送系统 API"
-	version:                     "v1"
-	author:                      "weclawbotnotify"
-	schemes:                     "http"
-	host:                        "localhost:48750"
-	basePath:                    "/api"
-	consumes:                    "application/json"
-	produces:                    "application/json"
-	wrapCodeMsg:                 true
+	title:    "WeClawBotNotify API"
+	desc:     "微信通知推送系统 API"
+	version:  "v1"
+	author:   "weclawbotnotify"
+	schemes:  "http"
+	host:     "localhost:48750"
+	consumes: "application/json"
+	produces: "application/json"
 )
 
 // ==================== 通用类型 ====================
-// BaseResp 通用响应结构
-type BaseResp {
-	Code int32  `json:"code"` // 响应码，0 表示成功
-	Msg  string `json:"msg"` // 响应消息
-}
-
 // HealthResp 健康检查响应
 type HealthResp {
-	ServiceName string `json:"serviceName"` // 服务名称
+	ServiceName string `json:"service_name"` // 服务名称
 	Timestamp   int64  `json:"timestamp"` // 服务器当前时间戳
 	Message     string `json:"message"` // 响应消息，e.g. "ok"
 }
@@ -89,11 +81,6 @@ type (
 	CreateClientReq {
 		Name string `json:"name"` // 客户端名称
 	}
-	// ClientQRData 客户端二维码数据
-	ClientQRData {
-		ClientId  int64  `json:"client_id"` // 客户端 ID
-		QrcodeUrl string `json:"qrcode_url"` // 二维码链接
-	}
 	// CreateClientResp 创建客户端响应
 	CreateClientResp {
 		ClientId  int64  `json:"client_id"` // 客户端 ID
@@ -103,11 +90,6 @@ type (
 	PollClientStatusReq {
 		ClientId int64 `form:"client_id"` // 客户端 ID
 	}
-	// ClientStatusData 客户端状态数据
-	ClientStatusData {
-		Status      string `json:"status"` // 状态：pending/connected/disconnected
-		IlinkUserId string `json:"ilink_user_id,optional"` // iLink 用户 ID（连接后返回）
-	}
 	// PollClientStatusResp 轮询客户端状态响应
 	PollClientStatusResp {
 		Status      string `json:"status"` // 状态：pending/connected/disconnected
@@ -115,7 +97,7 @@ type (
 	}
 	// DeleteClientReq 删除客户端请求
 	DeleteClientReq {
-		Id string `path:"id"` // 客户端 ID
+		Id int64 `path:"id"` // 客户端 ID
 	}
 	// DeleteClientResp 删除客户端响应
 	DeleteClientResp  {}
@@ -140,13 +122,6 @@ type (
 		Name        string `json:"name"` // 应用名称
 		Description string `json:"description,optional"` // 应用描述
 	}
-	// ApplicationData 创建应用返回数据
-	ApplicationData {
-		Id        int64  `json:"id"` // 应用 ID
-		Token     string `json:"token"` // 应用 Token（用于推送鉴权）
-		Name      string `json:"name"` // 应用名称
-		CreatedAt string `json:"created_at"` // 创建时间
-	}
 	// CreateApplicationResp 创建应用响应
 	CreateApplicationResp {
 		Id        int64  `json:"id"` // 应用 ID
@@ -168,7 +143,7 @@ type (
 	}
 	// DeleteApplicationReq 删除应用请求
 	DeleteApplicationReq {
-		Id string `path:"id"` // 应用 ID
+		Id int64 `path:"id"` // 应用 ID
 	}
 	// DeleteApplicationResp 删除应用响应
 	DeleteApplicationResp  {}
@@ -181,14 +156,6 @@ type (
 		Title    string `json:"title,optional"` // 消息标题
 		Message  string `json:"message"` // 消息内容
 		Priority int32  `json:"priority,optional"` // 优先级
-	}
-	// MessageData 消息数据
-	MessageData {
-		Id       int64  `json:"id"` // 消息 ID
-		Title    string `json:"title"` // 消息标题
-		Message  string `json:"message"` // 消息内容
-		Priority int32  `json:"priority"` // 优先级
-		Date     string `json:"date"` // 消息日期
 	}
 	// CreateMessageResp 创建消息响应
 	CreateMessageResp {
@@ -218,7 +185,7 @@ type (
 	}
 	// DeleteMessageReq 删除消息请求
 	DeleteMessageReq {
-		Id string `path:"id"` // 消息 ID
+		Id int64 `path:"id"` // 消息 ID
 	}
 	// DeleteMessageResp 删除消息响应
 	DeleteMessageResp  {}
@@ -247,7 +214,6 @@ service weclawbotnotify-api {
 	prefix:     /api/user
 	group:      user
 	middleware: ClientAuth
-	authType:   ClientAuth
 	tags:       "用户"
 )
 service weclawbotnotify-api {
@@ -263,7 +229,6 @@ service weclawbotnotify-api {
 	prefix:     /api/client
 	group:      client
 	middleware: ClientAuth
-	authType:   ClientAuth
 	tags:       "客户端管理"
 )
 service weclawbotnotify-api {
@@ -285,7 +250,6 @@ service weclawbotnotify-api {
 	prefix:     /api/application
 	group:      application
 	middleware: ClientAuth
-	authType:   ClientAuth
 	tags:       "应用管理"
 )
 service weclawbotnotify-api {
@@ -304,7 +268,6 @@ service weclawbotnotify-api {
 	prefix:     /api/message
 	group:      message
 	middleware: ClientAuth
-	authType:   ClientAuth
 	tags:       "消息管理"
 )
 service weclawbotnotify-api {
@@ -320,7 +283,6 @@ service weclawbotnotify-api {
 	prefix:     /api/message
 	group:      message
 	middleware: ApplicationAuth
-	authType:   ApplicationAuth
 	tags:       "消息推送"
 )
 service weclawbotnotify-api {

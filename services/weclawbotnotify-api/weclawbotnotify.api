@@ -11,7 +11,6 @@ info (
 	consumes:                    "application/json"
 	produces:                    "application/json"
 	wrapCodeMsg:                 true
-	securityDefinitionsFromJson: `{"ClientAuth":{"type":"apiKey","name":"Authorization","in":"header","description":"客户端 JWT 令牌，格式：Bearer {token}"},"ApplicationAuth":{"type":"apiKey","name":"X-App-Token","in":"header","description":"应用 Token，用于外部系统推送鉴权"}}`
 )
 
 // ==================== 通用类型 ====================
@@ -41,15 +40,11 @@ type (
 		Username  string `json:"username"` // 用户名
 		CreatedAt string `json:"created_at"` // 创建时间
 	}
-	// LoginData 登录/注册返回数据
-	LoginData {
-		Token string   `json:"token"` // JWT 令牌
-		User  UserInfo `json:"user"` // 用户信息
-	}
 	// RegisterResp 注册响应
 	RegisterResp {
-		Token string   `json:"token"` // JWT 令牌
-		User  UserInfo `json:"user"` // 用户信息
+		Token        string   `json:"token"` // Access Token (15分钟过期)
+		RefreshToken string   `json:"refresh_token"` // Refresh Token (7天过期)
+		User         UserInfo `json:"user"` // 用户信息
 	}
 	// ProfileResp 用户信息响应
 	ProfileResp {
@@ -62,8 +57,18 @@ type (
 	}
 	// LoginResp 登录响应
 	LoginResp {
-		Token string   `json:"token"` // JWT 令牌
-		User  UserInfo `json:"user"` // 用户信息
+		Token        string   `json:"token"` // Access Token (15分钟过期)
+		RefreshToken string   `json:"refresh_token"` // Refresh Token (7天过期)
+		User         UserInfo `json:"user"` // 用户信息
+	}
+	// RefreshReq 刷新令牌请求
+	RefreshReq {
+		RefreshToken string `json:"refresh_token"` // Refresh Token
+	}
+	// RefreshResp 刷新令牌响应
+	RefreshResp {
+		Token        string `json:"token"` // 新的 Access Token
+		RefreshToken string `json:"refresh_token"` // 新的 Refresh Token (轮换)
 	}
 )
 
@@ -232,6 +237,9 @@ service weclawbotnotify-api {
 
 	@handler Login
 	post /login (LoginReq) returns (LoginResp)
+
+	@handler Refresh
+	post /refresh (RefreshReq) returns (RefreshResp)
 }
 
 // 用户（ClientAuth 鉴权）

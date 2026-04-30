@@ -3,19 +3,56 @@
 skinparam classAttributeIconSize 0
 skinparam linetype ortho
 
-title WeClawBotNotify V1 - 类图\n(单用户 · 微信通知推送)
+title WeClawBotNotify V1 - 类图\n(单用户 · 微信通知推送 · 双令牌认证)
+
+package "jwtx (JWT 工具)" <<Utility>> {
+
+  class JWTHelper {
+    - publicKey: *rsa.PublicKey
+    - privateKey: *rsa.PrivateKey
+    - accessExpire: time.Duration
+    - refreshExpire: time.Duration
+    - signingMethod: jwt.SigningMethod
+    + generateAccessToken(claims: JWTClaims): (string, error)
+    + generateRefreshToken(claims: JWTClaims): (string, error)
+    + validateToken(tokenString: string): (*jwt.Token, *JWTClaims, error)
+    + validateRequest(req: *http.Request): (*jwt.Token, *JWTClaims, error)
+  }
+
+  class JWTClaims {
+    + UID: string
+    + TokenType: string
+    + JTI: string
+    + IsAccessToken(): bool
+    + IsRefreshToken(): bool
+  }
+
+  JWTHelper ..> JWTClaims : generates/validates
+
+  note right of JWTHelper
+    双令牌架构：
+    Access Token: 短有效期
+    Refresh Token: 长有效期（必须大于 Access Token）
+    不同过期时间，同一签名算法
+  end note
+}
 
 package "auth (账户服务)" <<Service>> {
 
   class AccountService {
     - db: *sql.DB
-    + register(username: string, password: string): error
-    + login(username: string, password: string): (string, error)
+    - jwtHelper: *JWTHelper
+    - refreshTokenModel: RefreshTokenModel
+    + register(username: string, password: string): (TokenPair, error)
+    + login(username: string, password: string): (TokenPair, error)
+    + refreshAccessToken(refreshToken: string): (TokenPair, error)
     + changePassword(userId: int64, oldPwd: string, newPwd: string): error
     + verifyJWT(token: string): (int64, error)
     + getUserById(id: int64): User
     - hashPassword(pwd: string): string
     - checkPassword(pwd: string, hash: string): bool
+    - generateTokenPair(userId: int64): (TokenPair, error)
+    - storeRefreshToken(ctx: context, userId: int64, jti: string, expiresAt: int64): error
   }
 
   class User {
@@ -26,7 +63,38 @@ package "auth (账户服务)" <<Service>> {
     + updatedAt: time.Time
   }
 
+  class TokenPair {
+    + accessToken: string
+    + refreshToken: string
+  }
+
   AccountService --> User : manages
+  AccountService --> JWTHelper : uses
+  AccountService --> RefreshTokenModel : uses
+  AccountService ..> TokenPair : returns
+}
+
+package "model (数据模型)" <<Data>> {
+
+  class RefreshTokenModel {
+    - conn: sqlx.SqlConn
+    + insert(ctx: context, data: *RefreshToken): error
+    + findByJTI(ctx: context, jti: string): (*RefreshToken, error)
+    + revokeByJTI(ctx: context, jti: string): error
+    + revokeByUserId(ctx: context, userId: int64): error
+    + deleteExpired(ctx: context): error
+  }
+
+  class RefreshToken {
+    + id: int64
+    + userId: int64
+    + jti: string
+    + revoked: int
+    + expiresAt: int64
+    + createdAt: int64
+  }
+
+  RefreshTokenModel --> RefreshToken : manages
 }
 
 package "client (Client 服务)" <<Service>> {
@@ -168,6 +236,7 @@ package "server (HTTP服务)" <<Gateway>> {
     + stop(): void
     - handleRegister(req: Request): Response
     - handleLogin(req: Request): Response
+    - handleRefresh(req: Request): Response
     - handleCreateClient(req: Request): Response
     - handleCreateApplication(req: Request): Response
     - handleCreateMessage(req: Request): Response
@@ -175,7 +244,7 @@ package "server (HTTP服务)" <<Gateway>> {
   }
 
   class ClientAuth {
-    - accountSvc: AccountService
+    - jwtHelper: *JWTHelper
     + authenticate(req: Request): (int64, bool)
   }
 
@@ -190,6 +259,7 @@ package "server (HTTP服务)" <<Gateway>> {
 
 User "1" --> "0..*" Client : has
 User "1" --> "0..*" Application : has
+User "1" --> "0..*" RefreshToken : has
 Application "1" --> "0..*" Message : has
 
 MessageService --> WeixinApiClient : sends via
@@ -197,9 +267,11 @@ MessageService --> ClientService : queries clients
 
 ClientService --> WeixinAuth : 获取二维码
 
-HTTPServer --> AccountService : 注册/登录
+HTTPServer --> AccountService : 注册/登录/刷新令牌
 HTTPServer --> ClientService : Client管理
 HTTPServer --> ApplicationService : Application管理
 HTTPServer --> MessageService : 推送/查询
+
+ClientAuth --> JWTHelper : 验证Access Token
 
 @enduml

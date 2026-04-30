@@ -10,6 +10,8 @@ import (
 	"fmt"
 	"net/http"
 
+	_ "modernc.org/sqlite"
+
 	"weclawbotnotify/pkg/result"
 	"weclawbotnotify/services/weclawbotnotify-api/internal/config"
 	"weclawbotnotify/services/weclawbotnotify-api/internal/handler"

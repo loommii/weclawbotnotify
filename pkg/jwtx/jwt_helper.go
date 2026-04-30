@@ -6,99 +6,95 @@ import (
 	"os"
 	"time"
 
-	"github.com/golang-jwt/jwt/v5" // 使用真正的 JWT 库
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/golang-jwt/jwt/v5/request"
+	"github.com/google/uuid"
 	"github.com/pkg/errors"
 )
 
-// JWTHelper 结构体，封装 JWT 的操作
+// JWTHelper JWT 令牌签发与验证工具
 type JWTHelper struct {
-	publicKey     *rsa.PublicKey
-	privateKey    *rsa.PrivateKey
-	expiredTime   time.Duration     // 过期时间
-	signingMethod jwt.SigningMethod // 签名算法
+	publicKey     *rsa.PublicKey    // RSA 公钥，用于验签
+	privateKey    *rsa.PrivateKey   // RSA 私钥，用于签名
+	expire        time.Duration     // Token 过期时间
+	signingMethod jwt.SigningMethod // 签名算法，默认 RS256
 }
 
-// NewJWTHelper 使用选项模式创建 JWTHelper 实例
+// NewJWTHelper 构造 JWTHelper，支持函数选项模式
 func NewJWTHelper(opts ...Option) *JWTHelper {
 	helper := &JWTHelper{
-		signingMethod: jwt.SigningMethodRS256, // 默认使用 RS256 算法
+		signingMethod: jwt.SigningMethodRS256,
 	}
-
-	// 应用选项
 	for _, opt := range opts {
 		opt(helper)
 	}
-
 	return helper
 }
 
-// GenerateToken 生成 JWT token
-/*
-	注意
-		1、这函数的入参值拷贝，不会修改原先的claims
-		2、该函数会覆盖时间，传入的时间将无效
-
-*/
+// GenerateToken 生成 JWT Token（使用配置的过期时间）
 func (j *JWTHelper) GenerateToken(claims JWTClaims) (string, error) {
-	now := time.Now()
+	if claims.IsRefreshToken() && claims.JTI == "" {
+		claims.JTI = uuid.New().String()
+	}
+	return j.generateToken(claims, j.expire)
+}
 
-	claims.ExpiresAt = jwt.NewNumericDate(now.Add(j.expiredTime)) // 过期时间
+// generateToken 核心签发逻辑：覆盖时间字段，签名返回
+func (j *JWTHelper) generateToken(claims JWTClaims, expire time.Duration) (string, error) {
+	now := time.Now()
+	claims.ExpiresAt = jwt.NewNumericDate(now.Add(expire))
 	claims.IssuedAt = jwt.NewNumericDate(now)
 	claims.NotBefore = jwt.NewNumericDate(now)
 
 	token := jwt.NewWithClaims(j.signingMethod, claims)
 	signedToken, err := token.SignedString(j.privateKey)
 	if err != nil {
-		return "", errors.Wrap(err, "failed to sign token")
+		return "", errors.Wrap(err, "签名令牌失败")
 	}
-
 	return signedToken, nil
 }
 
-// ValidateToken 验证 JWT token
+// ValidateToken 验证 JWT 令牌签名和 Claims
 func (j *JWTHelper) ValidateToken(tokenString string) (*jwt.Token, *JWTClaims, error) {
 	token, err := jwt.ParseWithClaims(tokenString, &JWTClaims{}, func(token *jwt.Token) (any, error) {
-		// 检查签名方法
 		if _, ok := token.Method.(*jwt.SigningMethodRSA); !ok {
-			return nil, errors.Errorf("unexpected signing method: %v", token.Header["alg"])
+			return nil, errors.Errorf("非预期签名算法: %v", token.Header["alg"])
 		}
 		return j.publicKey, nil
 	}, jwt.WithLeeway(5*time.Second))
 
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "failed to parse token")
+		return nil, nil, errors.Wrap(err, "解析令牌失败")
 	}
 
 	if claims, ok := token.Claims.(*JWTClaims); ok && token.Valid {
 		return token, claims, nil
 	}
 
-	return nil, nil, errors.New("invalid token")
+	return nil, nil, errors.New("无效令牌")
 }
 
-// ValidateRequest 验证 JWT 请求
+// ValidateRequest 从 HTTP 请求 Authorization 头提取并验证 JWT
 func (j *JWTHelper) ValidateRequest(req *http.Request) (*jwt.Token, *JWTClaims, error) {
 	token, err := request.ParseFromRequest(req, request.AuthorizationHeaderExtractor, func(token *jwt.Token) (any, error) {
-		// 检查签名方法
 		if _, ok := token.Method.(*jwt.SigningMethodRSA); !ok {
-			return nil, errors.Errorf("unexpected signing method: %v", token.Header["alg"])
+			return nil, errors.Errorf("非预期签名算法: %v", token.Header["alg"])
 		}
 		return j.publicKey, nil
 	}, request.WithClaims(&JWTClaims{}))
 
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "failed to parse token")
+		return nil, nil, errors.Wrap(err, "解析令牌失败")
 	}
 
 	if claims, ok := token.Claims.(*JWTClaims); ok && token.Valid {
 		return token, claims, nil
 	}
 
-	return nil, nil, errors.New("invalid token")
+	return nil, nil, errors.New("无效令牌")
 }
 
-// ParseRSAPrivateKeyFromPath 从 文件地址解析 RSA 私钥
+// ParseRSAPrivateKeyFromPath 从 PEM 文件解析 RSA 私钥
 func ParseRSAPrivateKeyFromPath(path string) (*rsa.PrivateKey, []byte, error) {
 	privateKeyPEM, err := os.ReadFile(path)
 	if err != nil {
@@ -107,12 +103,11 @@ func ParseRSAPrivateKeyFromPath(path string) (*rsa.PrivateKey, []byte, error) {
 	privateKey, err := jwt.ParseRSAPrivateKeyFromPEM(privateKeyPEM)
 	if err != nil {
 		return nil, nil, err
-
 	}
 	return privateKey, privateKeyPEM, err
 }
 
-// ParseRSAPublicKeyFromPath 从 文件地址解析 RSA 公钥
+// ParseRSAPublicKeyFromPath 从 PEM 文件解析 RSA 公钥
 func ParseRSAPublicKeyFromPath(path string) (*rsa.PublicKey, []byte, error) {
 	publicKeyPEM, err := os.ReadFile(path)
 	if err != nil {
@@ -121,7 +116,6 @@ func ParseRSAPublicKeyFromPath(path string) (*rsa.PublicKey, []byte, error) {
 	publicKey, err := jwt.ParseRSAPublicKeyFromPEM(publicKeyPEM)
 	if err != nil {
 		return nil, nil, err
-
 	}
 	return publicKey, publicKeyPEM, err
 }

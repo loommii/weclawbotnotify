@@ -2,25 +2,26 @@ package jwtx
 
 import "github.com/golang-jwt/jwt/v5"
 
-/*
-这里存放的该项目自己用到的一些内容
-*/
-
 const (
-	Access  = "access"
-	Refresh = "refresh"
+	Access  = "access"  // Access Token 类型标识
+	Refresh = "refresh" // Refresh Token 类型标识
 )
 
+// JWTClaims 双令牌通用 Claims
+// TokenType 区分 access/refresh，JTI 用于 Refresh Token 轮换验证
 type JWTClaims struct {
-	UID       string `json:"uid"`
-	TokenType string `json:"token_type"` // 用于区分是刷新Token还是授权Token // access 和 refresh
-	// 上方是自己自定义的元素
-	jwt.RegisteredClaims // 嵌入标准 claims
+	UID       string `json:"uid"`           // 用户 ID
+	TokenType string `json:"token_type"`    // 令牌类型：access / refresh
+	JTI       string `json:"jti,omitempty"` // JWT ID，Refresh Token 轮换时使用
+	jwt.RegisteredClaims
 }
 
+// IsAccessToken 判断是否为 Access Token
 func (j JWTClaims) IsAccessToken() bool {
 	return j.TokenType == Access
 }
+
+// IsRefreshToken 判断是否为 Refresh Token
 func (j JWTClaims) IsRefreshToken() bool {
 	return j.TokenType == Refresh
 }

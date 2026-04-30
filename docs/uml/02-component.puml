@@ -3,7 +3,7 @@
 skinparam componentStyle uml2
 skinparam linetype ortho
 
-title WeClawBotNotify V1 - 组件图\n(单用户 · 微信通知推送)
+title WeClawBotNotify V1 - 组件图\n(单用户 · 微信通知推送 · 双令牌认证)
 
 package "Web 管理后台 (前端)" {
   [pages/Login] as LoginPage
@@ -28,6 +28,7 @@ package "HTTP 服务 (后端统一入口)" {
     管理后台路由 (Client Auth):
     POST /api/auth/register    注册
     POST /api/auth/login       登录
+    POST /api/auth/refresh     刷新令牌
     GET  /api/user/profile     用户信息
     POST /api/user/password    修改密码
     POST /api/client/create    创建Client(获取二维码)
@@ -46,8 +47,11 @@ package "HTTP 服务 (后端统一入口)" {
   [middleware/ClientAuth] as ClientAuth
   note right of ClientAuth
     管理后台会话认证
-    JWT / Session Cookie
-    登录后签发
+    ===
+    验证 Access Token (JWT)
+    TokenType 必须为 "access"
+    Access Token 短有效期
+    过期后前端自动调用 /auth/refresh
   end note
 
   [middleware/ApplicationAuth] as ApplicationAuth
@@ -61,12 +65,35 @@ package "HTTP 服务 (后端统一入口)" {
 package "账户服务" {
   [auth/AccountService] as AccountSvc
   note right of AccountSvc
-    自建账户体系
+    自建账户体系 (双令牌)
     ===
-    register(username, password)
-    login(username, password) → JWT
+    register(username, password) → TokenPair
+    login(username, password) → TokenPair
+    refreshAccessToken(refreshToken) → TokenPair
     changePassword(userId, oldPwd, newPwd)
     verifyToken(jwt) → userId
+    ===
+    TokenPair = {
+      accessToken (短有效期),
+      refreshToken (长有效期)
+    }
+    Refresh Token 轮换：
+    每次刷新后旧 Refresh Token 失效
+  end note
+}
+
+package "JWT 工具" {
+  [jwtx/JWTHelper] as JWTHelper
+  note right of JWTHelper
+    双令牌生成与验证
+    ===
+    generateAccessToken(claims) → JWT
+    generateRefreshToken(claims) → JWT
+    validateToken(token) → claims
+    ===
+    Access: 短有效期, RS256
+    Refresh: 长有效期, RS256
+    Claims 包含 JTI 用于轮换
   end note
 }
 
@@ -155,6 +182,15 @@ database "SQLite" as DB {
       id, username, password_hash
       created_at, updated_at
     end note
+    artifact "refresh_tokens" as RefreshTokensTable
+    note right of RefreshTokensTable
+      id, user_id, jti,
+      revoked, expires_at,
+      created_at
+      ===
+      revoked: 0=有效, 1=已撤销
+      用于轮换验证和过期清理
+    end note
     artifact "clients" as ClientsTable
     note right of ClientsTable
       id, user_id, token, name
@@ -191,27 +227,15 @@ DashboardPage --> HTTPServer
 HTTPServer --> ClientAuth : 管理后台路由
 HTTPServer --> ApplicationAuth : 推送API路由
 
-ClientAuth --> AccountSvc : 验证JWT
+ClientAuth --> JWTHelper : 验证Access Token
 ApplicationAuth --> AppSvc : 验证Application Token
 
-HTTPServer --> AccountSvc : 注册/登录/改密
+HTTPServer --> AccountSvc : 注册/登录/刷新令牌
 HTTPServer --> ClientSvc : 创建Client
 HTTPServer --> AppSvc : Application管理
 HTTPServer --> MsgSvc : 推送通知/查看记录
 
-AccountSvc --> DB : 读写users表
-ClientSvc --> ILAuth : 获取二维码/轮询状态
-ClientSvc --> DB : 读写clients表
-AppSvc --> DB : 读写applications表
-
-MsgSvc --> ILClient : sendMessage
-MsgSvc --> DB : 读写messages表
-
-ILMonitor --> ILClient
-ILAuth --> WeChatAPI : HTTPS
-ILClient --> WeChatAPI : HTTPS
-
-ILAuth ..> CredsFile : 读写
-ILMonitor ..> SyncFile : 读写
+AccountSvc --> JWTHelper : 生成双令牌
+AccountSvc --> DB : 读写 refresh_tokens
 
 @enduml

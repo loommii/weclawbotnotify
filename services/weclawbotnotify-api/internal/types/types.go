@@ -128,19 +128,15 @@ type ListMessagesResp struct {
 	List []MessageInfo `json:"list"` // 消息列表
 }
 
-type LoginData struct {
-	Token string   `json:"token"` // JWT 令牌
-	User  UserInfo `json:"user"`  // 用户信息
-}
-
 type LoginReq struct {
 	Username string `json:"username"` // 用户名
 	Password string `json:"password"` // 密码
 }
 
 type LoginResp struct {
-	Token string   `json:"token"` // JWT 令牌
-	User  UserInfo `json:"user"`  // 用户信息
+	Token        string   `json:"token"`         // Access Token (15分钟过期)
+	RefreshToken string   `json:"refresh_token"` // Refresh Token (7天过期)
+	User         UserInfo `json:"user"`          // 用户信息
 }
 
 type MessageData struct {
@@ -173,14 +169,24 @@ type ProfileResp struct {
 	User UserInfo `json:"user"` // 用户信息
 }
 
+type RefreshReq struct {
+	RefreshToken string `json:"refresh_token"` // Refresh Token
+}
+
+type RefreshResp struct {
+	Token        string `json:"token"`         // 新的 Access Token
+	RefreshToken string `json:"refresh_token"` // 新的 Refresh Token (轮换)
+}
+
 type RegisterReq struct {
 	Username string `json:"username"` // 用户名
 	Password string `json:"password"` // 密码
 }
 
 type RegisterResp struct {
-	Token string   `json:"token"` // JWT 令牌
-	User  UserInfo `json:"user"`  // 用户信息
+	Token        string   `json:"token"`         // Access Token (15分钟过期)
+	RefreshToken string   `json:"refresh_token"` // Refresh Token (7天过期)
+	User         UserInfo `json:"user"`          // 用户信息
 }
 
 type UserInfo struct {

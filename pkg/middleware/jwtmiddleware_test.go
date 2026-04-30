@@ -78,7 +78,7 @@ func TestJWTMiddleware_RefreshTokenRejected(t *testing.T) {
 
 	helper := jwtx.NewJWTHelper(
 		jwtx.WithPrivateKey(privateKey),
-		jwtx.WithExpiredTime(1*time.Hour),
+		jwtx.WithExpiredTime(24*time.Hour),
 	)
 
 	claims := jwtx.JWTClaims{UID: "user123", TokenType: jwtx.Refresh}

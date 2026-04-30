@@ -1,6 +1,3 @@
-// Code scaffolded by goctl. Safe to edit.
-// goctl 1.10.1
-
 package auth
 
 import (
@@ -10,6 +7,7 @@ import (
 
 	"weclawbotnotify/pkg/jwtx"
 	"weclawbotnotify/pkg/xerr"
+	"weclawbotnotify/services/weclawbotnotify-api/internal/model"
 	"weclawbotnotify/services/weclawbotnotify-api/internal/svc"
 	"weclawbotnotify/services/weclawbotnotify-api/internal/types"
 
@@ -31,6 +29,7 @@ func NewLoginLogic(ctx context.Context, svcCtx *svc.ServiceContext) *LoginLogic 
 	}
 }
 
+// Login 用户登录：参数校验 → 查找用户 → 验证密码 → 签发双令牌
 func (l *LoginLogic) Login(req *types.LoginReq) (resp *types.LoginResp, err error) {
 	l.Infof("用户登录请求: username=%s", req.Username)
 
@@ -55,23 +54,60 @@ func (l *LoginLogic) Login(req *types.LoginReq) (resp *types.LoginResp, err erro
 		return nil, xerr.LoginPasswordWrong
 	}
 
-	token, err := l.svcCtx.JWTHelper.GenerateToken(jwtx.JWTClaims{
-		UID:       strconv.FormatInt(user.Id, 10),
-		TokenType: jwtx.Access,
-	})
+	// 签发双令牌
+	accessToken, refreshToken, err := l.generateTokenPair(user.Id)
 	if err != nil {
-		l.Errorf("生成JWT令牌失败: %v", err)
+		l.Errorf("生成令牌失败: %v", err)
 		return nil, xerr.LoginTokenFailed
 	}
 
 	l.Infof("用户登录成功: userId=%d, username=%s", user.Id, user.Username)
 
 	return &types.LoginResp{
-		Token: token,
+		Token:        accessToken,
+		RefreshToken: refreshToken,
 		User: types.UserInfo{
 			Id:        user.Id,
 			Username:  user.Username,
 			CreatedAt: fmt.Sprintf("%d", user.CreatedAt),
 		},
 	}, nil
+}
+
+// generateTokenPair 签发双令牌并持久化 Refresh Token
+func (l *LoginLogic) generateTokenPair(userId int64) (string, string, error) {
+	uid := strconv.FormatInt(userId, 10)
+
+	accessToken, err := l.svcCtx.AccessJWTHelper.GenerateToken(jwtx.JWTClaims{
+		UID:       uid,
+		TokenType: jwtx.Access,
+	})
+	if err != nil {
+		return "", "", err
+	}
+
+	refreshToken, err := l.svcCtx.RefreshJWTHelper.GenerateToken(jwtx.JWTClaims{
+		UID:       uid,
+		TokenType: jwtx.Refresh,
+	})
+	if err != nil {
+		return "", "", err
+	}
+
+	_, claims, err := l.svcCtx.RefreshJWTHelper.ValidateToken(refreshToken)
+	if err != nil {
+		return "", "", err
+	}
+
+	_, err = l.svcCtx.RefreshTokensModel.Insert(l.ctx, &model.RefreshTokens{
+		UserId:    userId,
+		Jti:       claims.JTI,
+		Revoked:   0,
+		ExpiresAt: claims.ExpiresAt.Unix(),
+	})
+	if err != nil {
+		return "", "", err
+	}
+
+	return accessToken, refreshToken, nil
 }

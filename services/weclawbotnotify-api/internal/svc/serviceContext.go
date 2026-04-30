@@ -1,9 +1,9 @@
 package svc
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
-	"time"
 
 	"weclawbotnotify/pkg/jwtx"
 	pkgmw "weclawbotnotify/pkg/middleware"
@@ -19,17 +19,20 @@ import (
 )
 
 type ServiceContext struct {
-	Config          config.Config
-	UsersModel      model.UsersModel
-	JWTHelper       *jwtx.JWTHelper
-	ClientAuth      rest.Middleware
-	ApplicationAuth rest.Middleware
+	Config             config.Config
+	UsersModel         model.UsersModel
+	RefreshTokensModel model.RefreshTokensModel
+	AccessJWTHelper    *jwtx.JWTHelper
+	RefreshJWTHelper   *jwtx.JWTHelper
+	ClientAuth         rest.Middleware
+	ApplicationAuth    rest.Middleware
 }
 
 func NewServiceContext(c config.Config) *ServiceContext {
 	conn := initDB(c.DataSource)
 	usersModel := model.NewUsersModel(conn)
-	jwtHelper := initJWT(c.Auth)
+	refreshTokensModel := model.NewRefreshTokensModel(conn)
+	accessJWTHelper, refreshJWTHelper := initJWT(c.Auth)
 
 	publicKeyPEM, err := os.ReadFile(c.Auth.PublicKeyPath)
 	if err != nil {
@@ -37,16 +40,17 @@ func NewServiceContext(c config.Config) *ServiceContext {
 	}
 
 	return &ServiceContext{
-		Config:          c,
-		UsersModel:      usersModel,
-		JWTHelper:       jwtHelper,
-		ClientAuth:      pkgmw.NewJWTMiddleware(publicKeyPEM).Handle,
-		ApplicationAuth: localmw.NewApplicationAuthMiddleware().Handle,
+		Config:             c,
+		UsersModel:         usersModel,
+		RefreshTokensModel: refreshTokensModel,
+		AccessJWTHelper:    accessJWTHelper,
+		RefreshJWTHelper:   refreshJWTHelper,
+		ClientAuth:         pkgmw.NewJWTMiddleware(publicKeyPEM).Handle,
+		ApplicationAuth:    localmw.NewApplicationAuthMiddleware().Handle,
 	}
 }
 
 // initDB 初始化数据库连接并自动建表
-// 注意：SQLite 是文件型数据库，无需账号密码，安全性由文件系统权限控制
 func initDB(dataSource string) sqlx.SqlConn {
 	dir := filepath.Dir(dataSource)
 	if dir != "." {
@@ -55,20 +59,30 @@ func initDB(dataSource string) sqlx.SqlConn {
 
 	conn := sqlx.NewSqlConn("sqlite", dataSource+"?_pragma=foreign_keys(1)&_pragma=journal_mode(WAL)&_pragma=synchronous(NORMAL)&_pragma=busy_timeout(5000)")
 
-	sqlBytes, err := os.ReadFile("sql/table_users.sqlite.sql")
-	if err != nil {
-		logx.Must(err)
+	// 依次执行建表 SQL
+	tables := []string{
+		"sql/table_users.sqlite.sql",
+		"sql/table_refresh_tokens.sqlite.sql",
 	}
-	_, err = conn.ExecCtx(nil, string(sqlBytes))
-	if err != nil {
-		logx.Must(err)
+	for _, table := range tables {
+		sqlBytes, err := os.ReadFile(table)
+		if err != nil {
+			logx.Must(err)
+		}
+		if _, err = conn.ExecCtx(nil, string(sqlBytes)); err != nil {
+			logx.Must(err)
+		}
 	}
 
 	return conn
 }
 
-// initJWT 初始化 JWT 工具（RSA 签名）
-func initJWT(c config.AuthConfig) *jwtx.JWTHelper {
+// initJWT 初始化双令牌 JWTHelper（RSA 签名）
+func initJWT(c config.AuthConfig) (*jwtx.JWTHelper, *jwtx.JWTHelper) {
+	if c.RefreshExpire <= c.AccessExpire {
+		logx.Must(fmt.Errorf("RefreshExpire (%v) 必须大于 AccessExpire (%v)", c.RefreshExpire, c.AccessExpire))
+	}
+
 	privateKey, _, err := jwtx.ParseRSAPrivateKeyFromPath(c.PrivateKeyPath)
 	if err != nil {
 		logx.Must(err)
@@ -78,9 +92,17 @@ func initJWT(c config.AuthConfig) *jwtx.JWTHelper {
 		logx.Must(err)
 	}
 
-	return jwtx.NewJWTHelper(
+	accessJWTHelper := jwtx.NewJWTHelper(
 		jwtx.WithPrivateKey(privateKey),
 		jwtx.WithPublicKey(publicKey),
-		jwtx.WithExpiredTime(time.Duration(c.AccessExpire)*time.Second),
+		jwtx.WithExpiredTime(c.AccessExpire),
 	)
+
+	refreshJWTHelper := jwtx.NewJWTHelper(
+		jwtx.WithPrivateKey(privateKey),
+		jwtx.WithPublicKey(publicKey),
+		jwtx.WithExpiredTime(c.RefreshExpire),
+	)
+
+	return accessJWTHelper, refreshJWTHelper
 }

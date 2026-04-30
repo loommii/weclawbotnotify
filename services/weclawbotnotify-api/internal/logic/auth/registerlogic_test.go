@@ -15,25 +15,40 @@ import (
 	"weclawbotnotify/services/weclawbotnotify-api/internal/types"
 )
 
-// generateTestJWTHelper 生成测试用的 JWTHelper
-func generateTestJWTHelper(t *testing.T) *jwtx.JWTHelper {
+// generateRegisterTestJWTHelpers 生成测试用的 Access 和 Refresh JWTHelper
+func generateRegisterTestJWTHelpers(t *testing.T) (*jwtx.JWTHelper, *jwtx.JWTHelper) {
 	t.Helper()
 	privateKey, err := rsa.GenerateKey(nil, 2048)
 	if err != nil {
-		t.Fatalf("failed to generate RSA private key: %v", err)
+		t.Fatalf("生成 RSA 密钥失败: %v", err)
 	}
-	return jwtx.NewJWTHelper(
+	accessHelper := jwtx.NewJWTHelper(
 		jwtx.WithPrivateKey(privateKey),
 		jwtx.WithPublicKey(&privateKey.PublicKey),
-		jwtx.WithExpiredTime(1*time.Hour),
+		jwtx.WithExpiredTime(15*time.Minute),
 	)
+	refreshHelper := jwtx.NewJWTHelper(
+		jwtx.WithPrivateKey(privateKey),
+		jwtx.WithPublicKey(&privateKey.PublicKey),
+		jwtx.WithExpiredTime(7*24*time.Hour),
+	)
+	return accessHelper, refreshHelper
+}
+
+// newTestRefreshMock 创建默认的 MockRefreshTokensModel
+func newTestRefreshMock() *model.MockRefreshTokensModel {
+	return &model.MockRefreshTokensModel{
+		MockInsert: func(ctx context.Context, data *model.RefreshTokens) (sql.Result, error) {
+			return &model.MockResult{LastInsertIdVal: 1}, nil
+		},
+	}
 }
 
 // TestRegisterLogic_Register_Success 测试正常注册流程
 // 场景：首次注册用户，系统中无用户，用户名不重复，所有操作正常
-// 预期：注册成功，返回有效的 JWT token 和用户信息
+// 预期：注册成功，返回有效的双令牌和用户信息
 func TestRegisterLogic_Register_Success(t *testing.T) {
-	helper := generateTestJWTHelper(t)
+	accessHelper, refreshHelper := generateRegisterTestJWTHelpers(t)
 	mockModel := &model.MockUsersModel{
 		MockCount: func(ctx context.Context) (int64, error) {
 			return 0, nil
@@ -47,8 +62,10 @@ func TestRegisterLogic_Register_Success(t *testing.T) {
 	}
 
 	svcCtx := &svc.ServiceContext{
-		UsersModel: mockModel,
-		JWTHelper:  helper,
+		UsersModel:         mockModel,
+		RefreshTokensModel: newTestRefreshMock(),
+		AccessJWTHelper:    accessHelper,
+		RefreshJWTHelper:   refreshHelper,
 	}
 
 	logic := NewRegisterLogic(context.Background(), svcCtx)
@@ -59,32 +76,37 @@ func TestRegisterLogic_Register_Success(t *testing.T) {
 
 	resp, err := logic.Register(req)
 	if err != nil {
-		t.Fatalf("expected no error, got %v", err)
+		t.Fatalf("预期无错误，got %v", err)
 	}
 	if resp == nil {
-		t.Fatal("expected non-nil response")
+		t.Fatal("预期非空响应")
 	}
 	if resp.Token == "" {
-		t.Error("expected non-empty token")
+		t.Error("预期非空 Access Token")
+	}
+	if resp.RefreshToken == "" {
+		t.Error("预期非空 Refresh Token")
 	}
 	if resp.User.Id != 1 {
-		t.Errorf("expected user id 1, got %d", resp.User.Id)
+		t.Errorf("预期 userId=1, got %d", resp.User.Id)
 	}
 	if resp.User.Username != "testuser" {
-		t.Errorf("expected username testuser, got %s", resp.User.Username)
+		t.Errorf("预期 username=testuser, got %s", resp.User.Username)
 	}
 }
 
 // TestRegisterLogic_Register_EmptyUsername 测试用户名为空的参数校验
 // 场景：用户注册时用户名为空字符串
-// 预期：返回 RegisterParamEmpty 错误，响应为 nil
+// 预期：返回 RegisterParamEmpty 错误
 func TestRegisterLogic_Register_EmptyUsername(t *testing.T) {
-	helper := generateTestJWTHelper(t)
+	accessHelper, refreshHelper := generateRegisterTestJWTHelpers(t)
 	mockModel := &model.MockUsersModel{}
 
 	svcCtx := &svc.ServiceContext{
-		UsersModel: mockModel,
-		JWTHelper:  helper,
+		UsersModel:         mockModel,
+		RefreshTokensModel: newTestRefreshMock(),
+		AccessJWTHelper:    accessHelper,
+		RefreshJWTHelper:   refreshHelper,
 	}
 
 	logic := NewRegisterLogic(context.Background(), svcCtx)
@@ -95,26 +117,28 @@ func TestRegisterLogic_Register_EmptyUsername(t *testing.T) {
 
 	resp, err := logic.Register(req)
 	if err == nil {
-		t.Fatal("expected error for empty username")
+		t.Fatal("空用户名应返回错误")
 	}
 	if resp != nil {
-		t.Error("expected nil response")
+		t.Error("预期 nil 响应")
 	}
 	if !errors.Is(err, xerr.RegisterParamEmpty) {
-		t.Errorf("expected RegisterParamEmpty error, got %v", err)
+		t.Errorf("预期 RegisterParamEmpty, got %v", err)
 	}
 }
 
 // TestRegisterLogic_Register_EmptyPassword 测试密码为空的参数校验
 // 场景：用户注册时密码为空字符串
-// 预期：返回 RegisterParamEmpty 错误，响应为 nil
+// 预期：返回 RegisterParamEmpty 错误
 func TestRegisterLogic_Register_EmptyPassword(t *testing.T) {
-	helper := generateTestJWTHelper(t)
+	accessHelper, refreshHelper := generateRegisterTestJWTHelpers(t)
 	mockModel := &model.MockUsersModel{}
 
 	svcCtx := &svc.ServiceContext{
-		UsersModel: mockModel,
-		JWTHelper:  helper,
+		UsersModel:         mockModel,
+		RefreshTokensModel: newTestRefreshMock(),
+		AccessJWTHelper:    accessHelper,
+		RefreshJWTHelper:   refreshHelper,
 	}
 
 	logic := NewRegisterLogic(context.Background(), svcCtx)
@@ -125,21 +149,21 @@ func TestRegisterLogic_Register_EmptyPassword(t *testing.T) {
 
 	resp, err := logic.Register(req)
 	if err == nil {
-		t.Fatal("expected error for empty password")
+		t.Fatal("空密码应返回错误")
 	}
 	if resp != nil {
-		t.Error("expected nil response")
+		t.Error("预期 nil 响应")
 	}
 	if !errors.Is(err, xerr.RegisterParamEmpty) {
-		t.Errorf("expected RegisterParamEmpty error, got %v", err)
+		t.Errorf("预期 RegisterParamEmpty, got %v", err)
 	}
 }
 
 // TestRegisterLogic_Register_AlreadyExists 测试 V1 版本单用户限制
 // 场景：系统中已存在用户（Count > 0），再次尝试注册新用户
-// 预期：返回 RegisterClosed 错误，拒绝注册
+// 预期：返回 RegisterClosed 错误
 func TestRegisterLogic_Register_AlreadyExists(t *testing.T) {
-	helper := generateTestJWTHelper(t)
+	accessHelper, refreshHelper := generateRegisterTestJWTHelpers(t)
 	mockModel := &model.MockUsersModel{
 		MockCount: func(ctx context.Context) (int64, error) {
 			return 1, nil
@@ -147,8 +171,10 @@ func TestRegisterLogic_Register_AlreadyExists(t *testing.T) {
 	}
 
 	svcCtx := &svc.ServiceContext{
-		UsersModel: mockModel,
-		JWTHelper:  helper,
+		UsersModel:         mockModel,
+		RefreshTokensModel: newTestRefreshMock(),
+		AccessJWTHelper:    accessHelper,
+		RefreshJWTHelper:   refreshHelper,
 	}
 
 	logic := NewRegisterLogic(context.Background(), svcCtx)
@@ -159,21 +185,21 @@ func TestRegisterLogic_Register_AlreadyExists(t *testing.T) {
 
 	resp, err := logic.Register(req)
 	if err == nil {
-		t.Fatal("expected error when user already exists")
+		t.Fatal("已存在用户应返回错误")
 	}
 	if resp != nil {
-		t.Error("expected nil response")
+		t.Error("预期 nil 响应")
 	}
 	if !errors.Is(err, xerr.RegisterClosed) {
-		t.Errorf("expected RegisterClosed error, got %v", err)
+		t.Errorf("预期 RegisterClosed, got %v", err)
 	}
 }
 
 // TestRegisterLogic_Register_UsernameAlreadyExists 测试用户名重复检测
-// 场景：系统中无用户，但尝试注册的用户名已存在（FindOneByUsername 返回用户）
-// 预期：返回 RegisterUsernameExist 错误，响应为 nil
+// 场景：系统中无用户，但尝试注册的用户名已存在
+// 预期：返回 RegisterUsernameExist 错误
 func TestRegisterLogic_Register_UsernameAlreadyExists(t *testing.T) {
-	helper := generateTestJWTHelper(t)
+	accessHelper, refreshHelper := generateRegisterTestJWTHelpers(t)
 	mockModel := &model.MockUsersModel{
 		MockCount: func(ctx context.Context) (int64, error) {
 			return 0, nil
@@ -184,8 +210,10 @@ func TestRegisterLogic_Register_UsernameAlreadyExists(t *testing.T) {
 	}
 
 	svcCtx := &svc.ServiceContext{
-		UsersModel: mockModel,
-		JWTHelper:  helper,
+		UsersModel:         mockModel,
+		RefreshTokensModel: newTestRefreshMock(),
+		AccessJWTHelper:    accessHelper,
+		RefreshJWTHelper:   refreshHelper,
 	}
 
 	logic := NewRegisterLogic(context.Background(), svcCtx)
@@ -196,21 +224,21 @@ func TestRegisterLogic_Register_UsernameAlreadyExists(t *testing.T) {
 
 	resp, err := logic.Register(req)
 	if err == nil {
-		t.Fatal("expected error when username already exists")
+		t.Fatal("用户名重复应返回错误")
 	}
 	if resp != nil {
-		t.Error("expected nil response")
+		t.Error("预期 nil 响应")
 	}
 	if !errors.Is(err, xerr.RegisterUsernameExist) {
-		t.Errorf("expected RegisterUsernameExist error, got %v", err)
+		t.Errorf("预期 RegisterUsernameExist, got %v", err)
 	}
 }
 
 // TestRegisterLogic_Register_CountError 测试查询用户数量失败
 // 场景：数据库查询用户数量时发生错误
-// 预期：返回 RegisterQueryFailed 错误，响应为 nil
+// 预期：返回 RegisterQueryFailed 错误
 func TestRegisterLogic_Register_CountError(t *testing.T) {
-	helper := generateTestJWTHelper(t)
+	accessHelper, refreshHelper := generateRegisterTestJWTHelpers(t)
 	mockModel := &model.MockUsersModel{
 		MockCount: func(ctx context.Context) (int64, error) {
 			return 0, errors.New("db error")
@@ -218,8 +246,10 @@ func TestRegisterLogic_Register_CountError(t *testing.T) {
 	}
 
 	svcCtx := &svc.ServiceContext{
-		UsersModel: mockModel,
-		JWTHelper:  helper,
+		UsersModel:         mockModel,
+		RefreshTokensModel: newTestRefreshMock(),
+		AccessJWTHelper:    accessHelper,
+		RefreshJWTHelper:   refreshHelper,
 	}
 
 	logic := NewRegisterLogic(context.Background(), svcCtx)
@@ -230,21 +260,21 @@ func TestRegisterLogic_Register_CountError(t *testing.T) {
 
 	resp, err := logic.Register(req)
 	if err == nil {
-		t.Fatal("expected error when count fails")
+		t.Fatal("查询失败应返回错误")
 	}
 	if resp != nil {
-		t.Error("expected nil response")
+		t.Error("预期 nil 响应")
 	}
 	if !errors.Is(err, xerr.RegisterQueryFailed) {
-		t.Errorf("expected RegisterQueryFailed error, got %v", err)
+		t.Errorf("预期 RegisterQueryFailed, got %v", err)
 	}
 }
 
 // TestRegisterLogic_Register_FindOneError 测试查询用户名时发生非 NotFound 错误
-// 场景：查询用户名是否存在时，数据库返回非预期错误（非 ErrNotFound）
-// 预期：返回 RegisterQueryFailed 错误，响应为 nil
+// 场景：查询用户名是否存在时，数据库返回非预期错误
+// 预期：返回 RegisterQueryFailed 错误
 func TestRegisterLogic_Register_FindOneError(t *testing.T) {
-	helper := generateTestJWTHelper(t)
+	accessHelper, refreshHelper := generateRegisterTestJWTHelpers(t)
 	mockModel := &model.MockUsersModel{
 		MockCount: func(ctx context.Context) (int64, error) {
 			return 0, nil
@@ -255,8 +285,10 @@ func TestRegisterLogic_Register_FindOneError(t *testing.T) {
 	}
 
 	svcCtx := &svc.ServiceContext{
-		UsersModel: mockModel,
-		JWTHelper:  helper,
+		UsersModel:         mockModel,
+		RefreshTokensModel: newTestRefreshMock(),
+		AccessJWTHelper:    accessHelper,
+		RefreshJWTHelper:   refreshHelper,
 	}
 
 	logic := NewRegisterLogic(context.Background(), svcCtx)
@@ -267,21 +299,21 @@ func TestRegisterLogic_Register_FindOneError(t *testing.T) {
 
 	resp, err := logic.Register(req)
 	if err == nil {
-		t.Fatal("expected error when FindOneByUsername fails")
+		t.Fatal("查询失败应返回错误")
 	}
 	if resp != nil {
-		t.Error("expected nil response")
+		t.Error("预期 nil 响应")
 	}
 	if !errors.Is(err, xerr.RegisterQueryFailed) {
-		t.Errorf("expected RegisterQueryFailed error, got %v", err)
+		t.Errorf("预期 RegisterQueryFailed, got %v", err)
 	}
 }
 
 // TestRegisterLogic_Register_InsertError 测试插入用户记录失败
 // 场景：参数校验通过、用户名不重复，但插入用户时数据库报错
-// 预期：返回 RegisterInsertFailed 错误，响应为 nil
+// 预期：返回 RegisterInsertFailed 错误
 func TestRegisterLogic_Register_InsertError(t *testing.T) {
-	helper := generateTestJWTHelper(t)
+	accessHelper, refreshHelper := generateRegisterTestJWTHelpers(t)
 	mockModel := &model.MockUsersModel{
 		MockCount: func(ctx context.Context) (int64, error) {
 			return 0, nil
@@ -295,8 +327,10 @@ func TestRegisterLogic_Register_InsertError(t *testing.T) {
 	}
 
 	svcCtx := &svc.ServiceContext{
-		UsersModel: mockModel,
-		JWTHelper:  helper,
+		UsersModel:         mockModel,
+		RefreshTokensModel: newTestRefreshMock(),
+		AccessJWTHelper:    accessHelper,
+		RefreshJWTHelper:   refreshHelper,
 	}
 
 	logic := NewRegisterLogic(context.Background(), svcCtx)
@@ -307,21 +341,21 @@ func TestRegisterLogic_Register_InsertError(t *testing.T) {
 
 	resp, err := logic.Register(req)
 	if err == nil {
-		t.Fatal("expected error when insert fails")
+		t.Fatal("插入失败应返回错误")
 	}
 	if resp != nil {
-		t.Error("expected nil response")
+		t.Error("预期 nil 响应")
 	}
 	if !errors.Is(err, xerr.RegisterInsertFailed) {
-		t.Errorf("expected RegisterInsertFailed error, got %v", err)
+		t.Errorf("预期 RegisterInsertFailed, got %v", err)
 	}
 }
 
 // TestRegisterLogic_Register_GetIdError 测试获取自增 ID 失败
 // 场景：用户插入成功，但获取 LastInsertId 时发生错误
-// 预期：返回 RegisterGetIdFailed 错误，响应为 nil
+// 预期：返回 RegisterGetIdFailed 错误
 func TestRegisterLogic_Register_GetIdError(t *testing.T) {
-	helper := generateTestJWTHelper(t)
+	accessHelper, refreshHelper := generateRegisterTestJWTHelpers(t)
 	mockModel := &model.MockUsersModel{
 		MockCount: func(ctx context.Context) (int64, error) {
 			return 0, nil
@@ -335,8 +369,10 @@ func TestRegisterLogic_Register_GetIdError(t *testing.T) {
 	}
 
 	svcCtx := &svc.ServiceContext{
-		UsersModel: mockModel,
-		JWTHelper:  helper,
+		UsersModel:         mockModel,
+		RefreshTokensModel: newTestRefreshMock(),
+		AccessJWTHelper:    accessHelper,
+		RefreshJWTHelper:   refreshHelper,
 	}
 
 	logic := NewRegisterLogic(context.Background(), svcCtx)
@@ -347,19 +383,19 @@ func TestRegisterLogic_Register_GetIdError(t *testing.T) {
 
 	resp, err := logic.Register(req)
 	if err == nil {
-		t.Fatal("expected error when get id fails")
+		t.Fatal("获取 ID 失败应返回错误")
 	}
 	if resp != nil {
-		t.Error("expected nil response")
+		t.Error("预期 nil 响应")
 	}
 	if !errors.Is(err, xerr.RegisterGetIdFailed) {
-		t.Errorf("expected RegisterGetIdFailed error, got %v", err)
+		t.Errorf("预期 RegisterGetIdFailed, got %v", err)
 	}
 }
 
 // TestRegisterLogic_Register_JWTError 测试 JWT 生成失败（JWTHelper 为 nil）
 // 场景：用户插入成功，但 JWTHelper 未初始化（nil），调用 GenerateToken 时 panic
-// 预期：触发 panic，验证代码对空指针的防御机制
+// 预期：触发 panic
 func TestRegisterLogic_Register_JWTError(t *testing.T) {
 	mockModel := &model.MockUsersModel{
 		MockCount: func(ctx context.Context) (int64, error) {
@@ -374,8 +410,10 @@ func TestRegisterLogic_Register_JWTError(t *testing.T) {
 	}
 
 	svcCtx := &svc.ServiceContext{
-		UsersModel: mockModel,
-		JWTHelper:  nil,
+		UsersModel:         mockModel,
+		RefreshTokensModel: newTestRefreshMock(),
+		AccessJWTHelper:    nil,
+		RefreshJWTHelper:   nil,
 	}
 
 	logic := NewRegisterLogic(context.Background(), svcCtx)
@@ -386,24 +424,21 @@ func TestRegisterLogic_Register_JWTError(t *testing.T) {
 
 	defer func() {
 		if r := recover(); r == nil {
-			t.Fatal("expected panic when JWTHelper is nil")
+			t.Fatal("JWTHelper 为 nil 时应触发 panic")
 		}
 	}()
 	logic.Register(req)
 }
 
-// TestIsNotFound 测试 isNotFound 辅助函数的判断逻辑
-// 场景 1：传入 model.ErrNotFound，预期返回 true
-// 场景 2：传入普通错误，预期返回 false
-// 场景 3：传入 nil，预期返回 false
+// TestIsNotFound 测试 isNotFound 辅助函数
 func TestIsNotFound(t *testing.T) {
 	if !isNotFound(model.ErrNotFound) {
-		t.Error("expected isNotFound to return true for ErrNotFound")
+		t.Error("ErrNotFound 应返回 true")
 	}
 	if isNotFound(errors.New("some other error")) {
-		t.Error("expected isNotFound to return false for other errors")
+		t.Error("其他错误应返回 false")
 	}
 	if isNotFound(nil) {
-		t.Error("expected isNotFound to return false for nil")
+		t.Error("nil 应返回 false")
 	}
 }

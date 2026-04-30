@@ -1,6 +1,6 @@
 @startuml WeClawBotNotify_RegisterSequence
 
-title WeClawBotNotify V1 - 用户注册与初始化序列图
+title WeClawBotNotify V1 - 用户注册与初始化序列图\n(双令牌认证)
 
 == 第一部分：用户注册账号 ==
 
@@ -8,6 +8,8 @@ actor "用户" as User
 participant "Web 管理后台\n(浏览器)" as Web
 participant "server/HTTPServer" as API
 participant "auth/AccountService" as AccountSvc
+participant "jwtx/JWTHelper" as JWTHelper
+participant "model/RefreshTokenModel" as RTModel
 participant "SQLite" as DB
 
 User -> Web : 打开注册页面
@@ -26,22 +28,32 @@ activate DB
 DB --> AccountSvc : userId
 deactivate DB
 
-AccountSvc --> API : userId, nil
-deactivate AccountSvc
+AccountSvc -> JWTHelper : generateAccessToken(\n  JWTClaims{UID, TokenType=access, JTI}\n)
+activate JWTHelper
+JWTHelper --> AccountSvc : accessToken (短有效期)
+deactivate JWTHelper
 
-API -> AccountSvc : login(username, password)
-activate AccountSvc
-AccountSvc -> DB : SELECT * FROM users\nWHERE username = ?
+AccountSvc -> JWTHelper : generateRefreshToken(\n  JWTClaims{UID, TokenType=refresh, JTI}\n)
+activate JWTHelper
+JWTHelper --> AccountSvc : refreshToken (长有效期)
+deactivate JWTHelper
+
+AccountSvc -> RTModel : insert(ctx, &RefreshToken{\n  userId, jti, revoked=0, expiresAt\n})
+activate RTModel
+RTModel -> DB : INSERT INTO refresh_tokens\n(user_id, jti, revoked, expires_at)\nVALUES (?, ?, 0, ?)
 activate DB
-DB --> AccountSvc : User
+DB --> RTModel : OK
 deactivate DB
-AccountSvc -> AccountSvc : checkPassword(password, hash)
-AccountSvc -> AccountSvc : generateJWT(userId)
-AccountSvc --> API : jwtToken, nil
+RTModel --> AccountSvc : nil
+deactivate RTModel
+
+AccountSvc --> API : TokenPair { accessToken, refreshToken }
 deactivate AccountSvc
 
-API --> Web : 200 OK\n{ token, user: { id, username } }
+API --> Web : 200 OK\n{\n  token: accessToken,\n  refreshToken: refreshToken,\n  user: { id, username }\n}
 deactivate API
+
+Web -> Web : 存储 accessToken\n和 refreshToken\n到 localStorage
 
 Web --> User : 注册成功，自动登录\n跳转到 Dashboard
 deactivate Web
@@ -51,10 +63,10 @@ deactivate Web
 User -> Web : 点击"创建 Client"\n输入名称 "我的微信"
 activate Web
 
-Web -> API : POST /api/client/create\n{ name: "我的微信" }\nAuthorization: Bearer {jwt}
+Web -> API : POST /api/client/create\n{ name: "我的微信" }\nAuthorization: Bearer {accessToken}
 activate API
 
-API -> API : ClientAuth 验证 JWT → userId
+API -> API : ClientAuth 验证 Access Token → userId
 
 participant "client/ClientService" as ClientSvc
 participant "ilink/WeixinMonitor" as Monitor
@@ -89,7 +101,7 @@ deactivate Web
 User -> WeChat : 微信扫描二维码确认
 
 loop 前端轮询状态
-  Web -> API : GET /api/client/status?clientId=xxx
+  Web -> API : GET /api/client/status?clientId=xxx\nAuthorization: Bearer {accessToken}
   API -> ClientSvc : pollClientStatus(userId, clientId)
   ClientSvc -> Auth : pollQRStatus(sessionKey)
   Auth -> WeChat : GET /ilink/bot/get_qrcode_status
@@ -114,10 +126,10 @@ activate Web
 
 participant "application/ApplicationService" as AppSvc
 
-Web -> API : POST /api/application\n{ name: "Jenkins CI", description: "..." }\nAuthorization: Bearer {jwt}
+Web -> API : POST /api/application\n{ name: "Jenkins CI", description: "..." }\nAuthorization: Bearer {accessToken}
 activate API
 
-API -> API : ClientAuth 验证 JWT → userId
+API -> API : ClientAuth 验证 Access Token → userId
 
 API -> AppSvc : createApplication(userId, "Jenkins CI", "...")
 activate AppSvc
@@ -145,13 +157,18 @@ deactivate Web
 
 note over User, WeChat
   初始化完成：
-  1. 用户账号已注册
+  1. 用户账号已注册 (双令牌已签发)
   2. Client 已创建 (微信Bot已绑定)
   3. Application 已创建 (推送Token已生成)
   ===
   外部系统可使用 appToken
   调用 POST /api/message 推送通知
   通知通过 Client 推送到用户微信
+  ===
+  双令牌机制：
+  - accessToken 短有效期，用于日常请求
+  - refreshToken 长有效期，用于刷新accessToken
+  - 前端自动处理令牌刷新
 end note
 
 @enduml

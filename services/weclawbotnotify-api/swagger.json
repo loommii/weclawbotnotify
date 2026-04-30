@@ -292,8 +292,12 @@
                 "data": {
                   "type": "object",
                   "properties": {
+                    "refresh_token": {
+                      "description": "Refresh Token (7天过期)",
+                      "type": "string"
+                    },
                     "token": {
-                      "description": "JWT 令牌",
+                      "description": "Access Token (15分钟过期)",
                       "type": "string"
                     },
                     "user": {
@@ -318,6 +322,76 @@
                           "type": "string"
                         }
                       }
+                    }
+                  }
+                },
+                "msg": {
+                  "description": "business message",
+                  "type": "string",
+                  "example": "ok"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/refresh": {
+      "post": {
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "schemes": [
+          "https"
+        ],
+        "tags": [
+          "认证"
+        ],
+        "summary": "Refresh",
+        "operationId": "authRefresh",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "required": [
+                "refresh_token"
+              ],
+              "properties": {
+                "refresh_token": {
+                  "description": "Refresh Token",
+                  "type": "string"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "description": "business code",
+                  "type": "integer",
+                  "example": 0
+                },
+                "data": {
+                  "type": "object",
+                  "properties": {
+                    "refresh_token": {
+                      "description": "新的 Refresh Token (轮换)",
+                      "type": "string"
+                    },
+                    "token": {
+                      "description": "新的 Access Token",
+                      "type": "string"
                     }
                   }
                 },
@@ -386,8 +460,12 @@
                 "data": {
                   "type": "object",
                   "properties": {
+                    "refresh_token": {
+                      "description": "Refresh Token (7天过期)",
+                      "type": "string"
+                    },
                     "token": {
-                      "description": "JWT 令牌",
+                      "description": "Access Token (15分钟过期)",
                       "type": "string"
                     },
                     "user": {
@@ -1143,21 +1221,7 @@
       }
     }
   },
-  "securityDefinitions": {
-    "ApplicationAuth": {
-      "description": "应用 Token，用于外部系统推送鉴权",
-      "type": "apiKey",
-      "name": "X-App-Token",
-      "in": "header"
-    },
-    "ClientAuth": {
-      "description": "客户端 JWT 令牌，格式：Bearer {token}",
-      "type": "apiKey",
-      "name": "Authorization",
-      "in": "header"
-    }
-  },
-  "x-date": "2026-04-30 17:37:23",
+  "x-date": "2026-04-30 22:03:22",
   "x-description": "This is a goctl generated swagger file.",
   "x-github": "https://github.com/zeromicro/go-zero",
   "x-go-zero-doc": "https://go-zero.dev/",

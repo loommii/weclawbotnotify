@@ -1,0 +1,162 @@
+@startuml WeClawBotNotify_RefreshSequence
+
+title WeClawBotNotify V1 - 刷新令牌序列图\n(双令牌轮换机制)
+
+actor "用户" as User
+participant "Web 管理后台\n(浏览器)" as Web
+participant "server/HTTPServer" as API
+participant "auth/AccountService" as AccountSvc
+participant "jwtx/JWTHelper" as JWTHelper
+participant "model/RefreshTokenModel" as RTModel
+participant "SQLite" as DB
+
+== 场景：Access Token 过期，前端自动刷新 ==
+
+User -> Web : 操作管理后台\n(如查看通知记录)
+activate Web
+
+Web -> API : GET /api/message/list\nAuthorization: Bearer {accessToken}\n(accessToken 已过期)
+activate API
+
+API -> API : ClientAuth 验证 Access Token
+
+API --> Web : 401 Unauthorized\n{ code: 100001, msg: "Unauthorized" }
+deactivate API
+
+Web -> Web : 拦截器检测到 401\n检查是否有 refreshToken
+
+alt 无 refreshToken
+  Web --> User : 跳转到登录页\n"会话已过期，请重新登录"
+else 有 refreshToken
+
+  Web -> API : POST /api/auth/refresh\n{ refreshToken: "eyJ..." }
+  activate API
+
+  API -> AccountSvc : refreshAccessToken(refreshToken)
+  activate AccountSvc
+
+  AccountSvc -> JWTHelper : validateToken(refreshToken)
+  activate JWTHelper
+
+  alt Refresh Token 格式无效或签名错误
+    JWTHelper --> AccountSvc : error: invalid token
+    AccountSvc --> API : error: RefreshTokenInvalid
+    API --> Web : 401 { code: 110300, msg: "刷新令牌无效" }
+    Web --> User : 跳转到登录页\n"请重新登录"
+  else Refresh Token 格式合法
+
+    JWTHelper --> AccountSvc : (token, claims, nil)
+    deactivate JWTHelper
+
+    AccountSvc -> AccountSvc : 检查 claims.TokenType == "refresh"
+
+    alt TokenType 不是 refresh
+      AccountSvc --> API : error: RefreshTokenInvalid
+      API --> Web : 401 { code: 110300, msg: "刷新令牌无效" }
+    else TokenType 是 refresh
+
+      AccountSvc -> AccountSvc : 提取 claims.JTI 和 claims.UID
+
+      AccountSvc -> RTModel : findByJTI(ctx, jti)
+      activate RTModel
+      RTModel -> DB : SELECT * FROM refresh_tokens\nWHERE jti = ?
+      activate DB
+      DB --> RTModel : RefreshToken | null
+      deactivate DB
+
+      alt JTI 不存在 (已使用/已撤销)
+        RTModel --> AccountSvc : nil, ErrNotFound
+        deactivate RTModel
+        AccountSvc --> API : error: RefreshTokenRevoked
+        API --> Web : 401 { code: 110301, msg: "刷新令牌已失效" }
+        Web --> User : 跳转到登录页\n"请重新登录"
+      else JTI 存在
+
+        RTModel --> AccountSvc : &RefreshToken{revoked=0, ...}
+        deactivate RTModel
+
+        AccountSvc -> AccountSvc : 检查 revoked == 0
+
+        alt revoked == 1 (已撤销)
+          AccountSvc --> API : error: RefreshTokenRevoked
+          API --> Web : 401 { code: 110301, msg: "刷新令牌已失效" }
+          Web --> User : 跳转到登录页\n"请重新登录"
+        else revoked == 0 (有效)
+
+          AccountSvc -> AccountSvc : 检查 expiresAt > now
+
+          alt Refresh Token 已过期
+            AccountSvc --> API : error: RefreshTokenExpired
+            API --> Web : 401 { code: 110302, msg: "刷新令牌已过期" }
+            Web --> User : 跳转到登录页\n"请重新登录"
+          else Refresh Token 有效
+
+            note over AccountSvc, RTModel
+              Refresh Token 轮换 (Rotation)：
+              1. 撤销旧 Refresh Token (revoked=1, 一次性使用)
+              2. 生成新的 Access Token + Refresh Token
+              3. 存储新 Refresh Token
+              防止 Refresh Token 被重放攻击
+            end note
+
+            AccountSvc -> RTModel : revokeByJTI(ctx, oldJTI)
+            activate RTModel
+            RTModel -> DB : UPDATE refresh_tokens\nSET revoked = 1\nWHERE jti = ?
+            activate DB
+            DB --> RTModel : OK
+            deactivate DB
+            RTModel --> AccountSvc : nil
+            deactivate RTModel
+
+            AccountSvc -> JWTHelper : generateAccessToken(\n  JWTClaims{UID, TokenType=access, newJTI}\n)
+            activate JWTHelper
+            JWTHelper --> AccountSvc : newAccessToken (短有效期)
+            deactivate JWTHelper
+
+            AccountSvc -> JWTHelper : generateRefreshToken(\n  JWTClaims{UID, TokenType=refresh, newJTI}\n)
+            activate JWTHelper
+            JWTHelper --> AccountSvc : newRefreshToken (长有效期)
+            deactivate JWTHelper
+
+            AccountSvc -> RTModel : insert(ctx, &RefreshToken{\n  userId, newJTI, revoked=0, newExpiresAt\n})
+            activate RTModel
+            RTModel -> DB : INSERT INTO refresh_tokens\n(user_id, jti, revoked, expires_at)\nVALUES (?, ?, 0, ?)
+            activate DB
+            DB --> RTModel : OK
+            deactivate DB
+            RTModel --> AccountSvc : nil
+            deactivate RTModel
+
+          AccountSvc --> API : TokenPair {\n  newAccessToken,\n  newRefreshToken\n}
+          deactivate AccountSvc
+
+          API --> Web : 200 OK\n{\n  token: newAccessToken,\n  refreshToken: newRefreshToken\n}
+          deactivate API
+
+          Web -> Web : 更新本地存储\naccessToken = newAccessToken\nrefreshToken = newRefreshToken
+
+          Web -> API : GET /api/message/list\nAuthorization: Bearer {newAccessToken}
+          activate API
+          API --> Web : 200 OK\n{ list: [...] }
+          deactivate API
+
+          Web --> User : 显示通知记录\n(用户无感知，自动完成)
+          deactivate Web
+
+        end
+      end
+    end
+  end
+end
+
+note over User, DB
+  双令牌轮换安全机制：
+  1. Refresh Token 一次性使用，用后撤销 (revoked=1)
+  2. 每次刷新生成全新的 Token Pair
+  3. 旧 Refresh Token 被重放 → 检测到 revoked=1 或 JTI 不存在 → 拒绝
+  4. Access Token 短有效期 → 减少泄露风险窗口
+  5. Refresh Token 长有效期 → 用户免登录
+  6. 撤销而非删除 → 保留审计记录，可追溯异常使用
+end note
+
+@enduml

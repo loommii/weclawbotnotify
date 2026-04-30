@@ -1,6 +1,6 @@
 @startuml WeClawBotNotify_State
 
-title WeClawBotNotify V1 - 系统状态图
+title WeClawBotNotify V1 - 系统状态图\n(双令牌认证)
 
 [*] --> SystemStarting : 启动服务
 
@@ -81,6 +81,40 @@ state Running {
     ClientBound --> ClientError : 致命错误
   }
 
+  state "用户认证状态" as AuthState {
+    [*] --> Unauthenticated : 未登录
+
+    state "未认证" as Unauthenticated
+
+    state "已认证" as Authenticated {
+      [*] --> HasAccessToken
+
+      state "Access Token 有效" as HasAccessToken {
+        [*] --> AccessValid
+        AccessValid --> AccessExpired : Access Token 到期
+      }
+
+      state "Access Token 过期" as AccessExpired {
+        [*] --> Refreshing
+        Refreshing --> RefreshSuccess : Refresh Token 有效
+        Refreshing --> RefreshFailed : Refresh Token 无效/过期/已撤销
+        RefreshSuccess --> AccessValid : 获得新 TokenPair
+      }
+
+      AccessExpired --> AccessValid : POST /api/auth/refresh 成功\n(轮换: 旧RefreshToken删除, 新TokenPair签发)
+      AccessValid --> AccessExpired : Access Token 过期
+    }
+
+    state "Refresh Token 过期" as RefreshExpired {
+      [*] --> NeedRelogin
+    }
+
+    Unauthenticated --> Authenticated : 登录/注册成功\n(签发 TokenPair)
+    Authenticated --> Unauthenticated : POST /api/auth/refresh 失败\n(Refresh Token 无效/过期)
+    RefreshFailed --> Unauthenticated : 需要重新登录
+    AccessValid --> Unauthenticated : 主动登出
+  }
+
   state "用户账户状态" as UserAccountState {
     [*] --> Unregistered : 新用户
 
@@ -120,6 +154,17 @@ note right of ClientLifecycle
   通过管理后台创建
   扫码绑定微信Bot
   bot_token 过期需重新创建
+end note
+
+note right of AuthState
+  双令牌认证状态流转：
+  ===
+  1. 登录/注册 → 签发 TokenPair
+  2. Access Token (短有效期) → 日常请求鉴权
+  3. Access Token 过期 → 前端自动 refresh
+  4. Refresh Token (长有效期) → 刷新 Access Token
+  5. Refresh Token 轮换 → 每次刷新生成新 TokenPair
+  6. Refresh Token 过期/无效 → 需重新登录
 end note
 
 note right of AppState

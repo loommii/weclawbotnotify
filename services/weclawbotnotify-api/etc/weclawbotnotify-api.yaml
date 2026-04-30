@@ -5,11 +5,12 @@ Port: 48750
 # SQLite 数据库配置
 DataSource: data/weclawbotnotify.db
 
-# JWT 认证配置（RSA 签名）
+# JWT 双令牌认证配置（RSA 签名）
 Auth:
   PrivateKeyPath: etc/keys/private.pem
   PublicKeyPath: etc/keys/public.pem
-  AccessExpire: 86400
+  AccessExpire: 1h        # Access Token 过期时间：1小时
+  RefreshExpire: 168h     # Refresh Token 过期时间：7天
 
 # 日志配置
 Log:

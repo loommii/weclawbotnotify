@@ -189,8 +189,11 @@ paths:
                 type: integer
               data:
                 properties:
+                  refresh_token:
+                    description: Refresh Token (7天过期)
+                    type: string
                   token:
-                    description: JWT 令牌
+                    description: Access Token (15分钟过期)
                     type: string
                   user:
                     description: 用户信息
@@ -218,6 +221,53 @@ paths:
       schemes:
       - https
       summary: Login
+      tags:
+      - 认证
+  /api/auth/refresh:
+    post:
+      consumes:
+      - application/json
+      operationId: authRefresh
+      parameters:
+      - in: body
+        name: body
+        required: true
+        schema:
+          properties:
+            refresh_token:
+              description: Refresh Token
+              type: string
+          required:
+          - refresh_token
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: ""
+          schema:
+            properties:
+              code:
+                description: business code
+                example: 0
+                type: integer
+              data:
+                properties:
+                  refresh_token:
+                    description: 新的 Refresh Token (轮换)
+                    type: string
+                  token:
+                    description: 新的 Access Token
+                    type: string
+                type: object
+              msg:
+                description: business message
+                example: ok
+                type: string
+            type: object
+      schemes:
+      - https
+      summary: Refresh
       tags:
       - 认证
   /api/auth/register:
@@ -254,8 +304,11 @@ paths:
                 type: integer
               data:
                 properties:
+                  refresh_token:
+                    description: Refresh Token (7天过期)
+                    type: string
                   token:
-                    description: JWT 令牌
+                    description: Access Token (15分钟过期)
                     type: string
                   user:
                     description: 用户信息
@@ -771,19 +824,8 @@ produces:
 - application/json
 schemes:
 - http
-securityDefinitions:
-  ApplicationAuth:
-    description: 应用 Token，用于外部系统推送鉴权
-    in: header
-    name: X-App-Token
-    type: apiKey
-  ClientAuth:
-    description: 客户端 JWT 令牌，格式：Bearer {token}
-    in: header
-    name: Authorization
-    type: apiKey
 swagger: "2.0"
-x-date: "2026-04-30 17:37:41"
+x-date: "2026-04-30 22:03:26"
 x-description: This is a goctl generated swagger file.
 x-github: https://github.com/zeromicro/go-zero
 x-go-zero-doc: https://go-zero.dev/

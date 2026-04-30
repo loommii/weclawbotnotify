@@ -1,0 +1,40 @@
+# 日志文件
+logs/
+*.log
+
+# 数据库文件
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+
+# RSA 私钥（不提交到仓库）
+**/private.pem
+
+# 编译产物
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+/services/weclawbotnotify-api/weclawbotnotify-api
+
+# Go 工作区文件
+go.work
+
+# 临时文件
+tmp/
+temp/
+*.tmp
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# macOS
+.DS_Store

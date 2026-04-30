@@ -1,3 +1,21 @@
 Name: weclawbotnotify-api
 Host: 0.0.0.0
 Port: 48750
+
+# SQLite 数据库配置
+DataSource: data/weclawbotnotify.db
+
+# JWT 认证配置（RSA 签名）
+Auth:
+  PrivateKeyPath: etc/keys/private.pem
+  PublicKeyPath: etc/keys/public.pem
+  AccessExpire: 86400
+
+# 日志配置
+Log:
+  ServiceName: weclawbotnotify-api
+  Mode: file
+  Path: logs
+  Level: info
+  KeepDays: 7
+  Compress: true

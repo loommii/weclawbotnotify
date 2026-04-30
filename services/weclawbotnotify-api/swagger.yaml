@@ -737,9 +737,6 @@ paths:
                 type: integer
               data:
                 properties:
-                  token:
-                    description: JWT 令牌
-                    type: string
                   user:
                     description: 用户信息
                     properties:
@@ -786,7 +783,7 @@ securityDefinitions:
     name: Authorization
     type: apiKey
 swagger: "2.0"
-x-date: "2026-04-30 01:10:02"
+x-date: "2026-04-30 17:37:41"
 x-description: This is a goctl generated swagger file.
 x-github: https://github.com/zeromicro/go-zero
 x-go-zero-doc: https://go-zero.dev/

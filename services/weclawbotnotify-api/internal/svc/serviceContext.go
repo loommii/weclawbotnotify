@@ -6,8 +6,9 @@ import (
 	"time"
 
 	"weclawbotnotify/pkg/jwtx"
+	pkgmw "weclawbotnotify/pkg/middleware"
 	"weclawbotnotify/services/weclawbotnotify-api/internal/config"
-	"weclawbotnotify/services/weclawbotnotify-api/internal/middleware"
+	localmw "weclawbotnotify/services/weclawbotnotify-api/internal/middleware"
 	"weclawbotnotify/services/weclawbotnotify-api/internal/model"
 
 	_ "modernc.org/sqlite"
@@ -30,12 +31,17 @@ func NewServiceContext(c config.Config) *ServiceContext {
 	usersModel := model.NewUsersModel(conn)
 	jwtHelper := initJWT(c.Auth)
 
+	publicKeyPEM, err := os.ReadFile(c.Auth.PublicKeyPath)
+	if err != nil {
+		logx.Must(err)
+	}
+
 	return &ServiceContext{
 		Config:          c,
 		UsersModel:      usersModel,
 		JWTHelper:       jwtHelper,
-		ClientAuth:      middleware.NewClientAuthMiddleware().Handle,
-		ApplicationAuth: middleware.NewApplicationAuthMiddleware().Handle,
+		ClientAuth:      pkgmw.NewJWTMiddleware(publicKeyPEM).Handle,
+		ApplicationAuth: localmw.NewApplicationAuthMiddleware().Handle,
 	}
 }
 

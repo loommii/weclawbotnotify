@@ -51,6 +51,10 @@ type (
 		Token string   `json:"token"` // JWT 令牌
 		User  UserInfo `json:"user"` // 用户信息
 	}
+	// ProfileResp 用户信息响应
+	ProfileResp {
+		User UserInfo `json:"user"` // 用户信息
+	}
 	// LoginReq 登录请求
 	LoginReq {
 		Username string `json:"username"` // 用户名
@@ -240,7 +244,7 @@ service weclawbotnotify-api {
 )
 service weclawbotnotify-api {
 	@handler GetProfile
-	get /profile returns (RegisterResp)
+	get /profile returns (ProfileResp)
 
 	@handler ChangePassword
 	post /password (ChangePasswordReq) returns (ChangePasswordResp)

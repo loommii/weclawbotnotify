@@ -169,6 +169,10 @@ type PollClientStatusResp struct {
 	IlinkUserId string `json:"ilink_user_id,optional"` // iLink 用户 ID（连接后返回）
 }
 
+type ProfileResp struct {
+	User UserInfo `json:"user"` // 用户信息
+}
+
 type RegisterReq struct {
 	Username string `json:"username"` // 用户名
 	Password string `json:"password"` // 密码

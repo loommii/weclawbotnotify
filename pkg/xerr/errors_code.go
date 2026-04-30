@@ -35,5 +35,10 @@ var (
 	RefreshTokenStoreErr = NewCodeError(110303, "存储刷新令牌失败")
 )
 
+// 密码管理错误 1104XX
+var (
+	PasswordTooWeak = NewCodeError(110400, "密码强度不足，至少8位且包含大小写字母和数字")
+)
+
 // 第三方错误 20XXXX
 var ()

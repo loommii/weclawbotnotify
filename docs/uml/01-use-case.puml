@@ -86,4 +86,16 @@ note bottom of UC_LOGIN
   用于操作 Application / Client
 end note
 
+note bottom of UC_CHANGE_PWD
+  修改密码（需已登录）
+  ===
+  1. 验证旧密码
+  2. 验证新密码强度（>=8位，大小写+数字）
+  3. 更新密码哈希
+  4. 撤销所有 Refresh Token（强制重新登录）
+  ===
+  POST /api/user/password
+  Authorization: Bearer {accessToken}
+end note
+
 @enduml

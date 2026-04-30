@@ -1,5 +1,10 @@
 @startuml WeClawBotNotify_State
 
+left to right direction
+skinparam linetype ortho
+skinparam nodesep 80
+skinparam ranksep 100
+
 title WeClawBotNotify V1 - 系统状态图\n(双令牌认证)
 
 [*] --> SystemStarting : 启动服务
@@ -17,61 +22,14 @@ SystemStarting --> Running : 启动成功
 state Running {
 
   state "Client 生命周期" as ClientLifecycle {
-    [*] --> ClientPending : 等待用户创建 Client
+    [*] --> ClientPending
 
-    state "Client 未创建" as ClientPending {
-      [*] --> WaitingUserAction
-    }
-
-    state "Client 认证中" as ClientAuthenticating {
-      state "获取二维码" as FetchingQR
-      state "等待扫码" as WaitingScan
-      state "二维码过期" as QRExpired
-      state "已扫码" as Scanned
-      state "IDC 重定向" as IDCRedirect
-
-      FetchingQR --> WaitingScan : 二维码展示成功
-      WaitingScan --> Scanned : 用户扫码
-      WaitingScan --> QRExpired : 超时 (5分钟)
-      WaitingScan --> IDCRedirect : 收到 redirect_host
-      IDCRedirect --> WaitingScan : 切换服务器
-      QRExpired --> FetchingQR : 重新获取
-      Scanned --> ClientBound : 确认登录
-      Scanned --> WaitingScan : 取消
-    }
-
-    state "Client 已绑定" as ClientBound {
-      [*] --> Polling
-
-      state "长轮询中" as Polling {
-        Polling --> ProcessingInbound : GetUpdates 返回消息
-        Polling --> Polling : 超时 (35s)
-      }
-
-      state "处理入站消息" as ProcessingInbound {
-        [*] --> RecordMessage
-        RecordMessage --> AutoReply
-        AutoReply --> [*]
-      }
-
-      ProcessingInbound --> Polling : 处理完成
-
-      Polling --> SessionExpired : errcode = -14
-      Polling --> Retrying : 网络错误
-    }
-
-    state "Session 过期" as SessionExpired {
-      [*] --> BackingOff
-      BackingOff --> WaitingReauth : 等待 1 小时
-      WaitingReauth --> ClientPending : 标记为需重新创建
-    }
-
-    state "重试中" as Retrying {
-      [*] --> CalculatingBackoff
-      CalculatingBackoff --> AttemptingRetry
-      AttemptingRetry --> Polling : 重试成功
-      AttemptingRetry --> ClientError : 连续失败 3 次
-    }
+    state ClientPending <<choice>>
+    state ClientAuthenticating
+    state ClientBound
+    state SessionExpired
+    state Retrying
+    state ClientError
 
     ClientPending --> ClientAuthenticating : 用户点击"创建Client"
     ClientAuthenticating --> ClientBound : 扫码成功
@@ -79,68 +37,47 @@ state Running {
     ClientBound --> SessionExpired : session 过期
     ClientBound --> Retrying : 网络错误
     ClientBound --> ClientError : 致命错误
+    SessionExpired --> ClientPending : 等待 1 小时后重新创建
+    Retrying --> ClientBound : 重试成功
+    Retrying --> ClientError : 连续失败 3 次
   }
 
   state "用户认证状态" as AuthState {
-    [*] --> Unauthenticated : 未登录
+    [*] --> Unauthenticated
 
-    state "未认证" as Unauthenticated
-
-    state "已认证" as Authenticated {
-      [*] --> HasAccessToken
-
-      state "Access Token 有效" as HasAccessToken {
-        [*] --> AccessValid
-        AccessValid --> AccessExpired : Access Token 到期
-      }
-
-      state "Access Token 过期" as AccessExpired {
-        [*] --> Refreshing
-        Refreshing --> RefreshSuccess : Refresh Token 有效
-        Refreshing --> RefreshFailed : Refresh Token 无效/过期/已撤销
-        RefreshSuccess --> AccessValid : 获得新 TokenPair
-      }
-
-      AccessExpired --> AccessValid : POST /api/auth/refresh 成功\n(轮换: 旧RefreshToken删除, 新TokenPair签发)
-      AccessValid --> AccessExpired : Access Token 过期
-    }
-
-    state "Refresh Token 过期" as RefreshExpired {
-      [*] --> NeedRelogin
-    }
+    state Unauthenticated
+    state Authenticated
+    state RefreshExpired
 
     Unauthenticated --> Authenticated : 登录/注册成功\n(签发 TokenPair)
-    Authenticated --> Unauthenticated : POST /api/auth/refresh 失败\n(Refresh Token 无效/过期)
-    RefreshFailed --> Unauthenticated : 需要重新登录
-    AccessValid --> Unauthenticated : 主动登出
+    Authenticated --> Unauthenticated : Refresh Token 无效/过期\n或主动登出
+    Authenticated --> RefreshExpired : Refresh Token 过期
+    RefreshExpired --> Unauthenticated : 需要重新登录
   }
 
   state "用户账户状态" as UserAccountState {
-    [*] --> Unregistered : 新用户
+    [*] --> Unregistered
 
-    state "未注册" as Unregistered
-
-    state "已注册" as Registered {
-      [*] --> Active
-      state "活跃" as Active
-    }
+    state Unregistered
+    state Registered
 
     Unregistered --> Registered : POST /api/auth/register
+    Registered --> Unregistered : 账户删除
   }
 
   state "Application 状态" as AppState {
-    [*] --> AppCreated : 用户创建 Application
-    state "有效" as AppActive
-    state "已删除" as AppDeleted
+    [*] --> AppActive
 
-    AppCreated --> AppActive : 创建成功
+    state AppActive
+    state AppDeleted
+
     AppActive --> AppDeleted : DELETE /api/application/:id
   }
 }
 
 Running --> Stopping : SIGTERM
 
-state "停止中" as Stopping {
+state Stopping {
   [*] --> SavingState
   SavingState --> ClosingConnections : 状态保存完成
   ClosingConnections --> Stopped : 资源清理完成

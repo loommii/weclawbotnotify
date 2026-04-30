@@ -19,6 +19,15 @@ var (
 	RegisterClosed        = NewCodeError(110107, "注册已关闭，V1版本仅支持单用户")
 )
 
+// 登录错误 1102XX
+var (
+	LoginParamEmpty    = NewCodeError(110200, "用户名和密码不能为空")
+	LoginUserNotFound  = NewCodeError(110201, "用户名或密码错误")
+	LoginPasswordWrong = NewCodeError(110202, "用户名或密码错误")
+	LoginQueryFailed   = NewCodeError(110203, "查询用户失败")
+	LoginTokenFailed   = NewCodeError(110204, "生成令牌失败")
+)
+
 // 第三方的错误 统一用 20XXXX
 var ( // wechat API Error 2000XX
 

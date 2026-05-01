@@ -42,6 +42,7 @@ type (
 		Token       string        `db:"token"`
 		Name        string        `db:"name"`
 		Description string        `db:"description"`
+		Status      int64         `db:"status"`
 		CreatedAt   int64         `db:"created_at"`
 		LastUsedAt  sql.NullInt64 `db:"last_used_at"`
 	}
@@ -89,14 +90,14 @@ func (m *defaultApplicationsModel) FindOneByToken(ctx context.Context, token str
 }
 
 func (m *defaultApplicationsModel) Insert(ctx context.Context, data *Applications) (sql.Result, error) {
-	query := fmt.Sprintf("insert into %s (%s) values (?, ?, ?, ?, ?)", m.table, applicationsRowsExpectAutoSet)
-	ret, err := m.conn.ExecCtx(ctx, query, data.UserId, data.Token, data.Name, data.Description, data.LastUsedAt)
+	query := fmt.Sprintf("insert into %s (%s) values (?, ?, ?, ?, ?, ?)", m.table, applicationsRowsExpectAutoSet)
+	ret, err := m.conn.ExecCtx(ctx, query, data.UserId, data.Token, data.Name, data.Description, data.Status, data.LastUsedAt)
 	return ret, err
 }
 
 func (m *defaultApplicationsModel) Update(ctx context.Context, newData *Applications) error {
 	query := fmt.Sprintf("update %s set %s where `id` = ?", m.table, applicationsRowsWithPlaceHolder)
-	_, err := m.conn.ExecCtx(ctx, query, newData.UserId, newData.Token, newData.Name, newData.Description, newData.LastUsedAt, newData.Id)
+	_, err := m.conn.ExecCtx(ctx, query, newData.UserId, newData.Token, newData.Name, newData.Description, newData.Status, newData.LastUsedAt, newData.Id)
 	return err
 }
 

@@ -1,0 +1,62 @@
+@import 'tailwindcss';
+@import 'primeicons/primeicons.css';
+
+@custom-variant dark (&:where(.p-dark, .p-dark *));
+
+html,
+body,
+#app {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family:
+    Inter,
+    'PingFang SC',
+    'Microsoft YaHei',
+    system-ui,
+    -apple-system,
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  user-select: none;
+}
+
+input,
+textarea,
+[contenteditable="true"] {
+  user-select: text;
+}
+
+/* ── Aura 主题自定义 ──
+ *   品牌色：靛蓝紫（#5E6AD2）
+ *   暗色面：深炭灰基底，避免纯黑，视觉更柔和   ── */
+
+.p-dark {
+  --p-primary-50: #eef0ff;
+  --p-primary-100: #d9ddff;
+  --p-primary-200: #b3baff;
+  --p-primary-300: #8c96ff;
+  --p-primary-400: #6673ff;
+  --p-primary-500: #5e6ad2;
+  --p-primary-600: #4b55b8;
+  --p-primary-700: #3a429e;
+  --p-primary-800: #2a3084;
+  --p-primary-900: #1c206a;
+  --p-primary-950: #101450;
+
+  --p-surface-0: #ffffff;
+  --p-surface-50: #fafafa;
+  --p-surface-100: #f4f4f5;
+  --p-surface-200: #e4e4e7;
+  --p-surface-300: #d4d4d8;
+  --p-surface-400: #a1a1aa;
+  --p-surface-500: #71717a;
+  --p-surface-600: #52525b;
+  --p-surface-700: #3f3f46;
+  --p-surface-800: #2a2a2e;
+  --p-surface-900: #1c1c1e;
+  --p-surface-950: #141415;
+}

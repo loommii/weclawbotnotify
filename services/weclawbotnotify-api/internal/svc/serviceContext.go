@@ -25,6 +25,7 @@ type ServiceContext struct {
 	UsersModel         model.UsersModel
 	RefreshTokensModel model.RefreshTokensModel
 	ApplicationsModel  model.ApplicationsModel
+	ClientsModel       model.ClientsModel
 	AccessJWTHelper    *jwtx.JWTHelper
 	RefreshJWTHelper   *jwtx.JWTHelper
 	ClientAuth         rest.Middleware
@@ -37,6 +38,7 @@ func NewServiceContext(c config.Config) *ServiceContext {
 	usersModel := model.NewUsersModel(conn)
 	refreshTokensModel := model.NewRefreshTokensModel(conn)
 	applicationsModel := model.NewApplicationsModel(conn)
+	clientsModel := model.NewClientsModel(conn)
 	accessJWTHelper, refreshJWTHelper := initJWT(c.Auth)
 
 	publicKeyPEM, err := os.ReadFile(c.Auth.PublicKeyPath)
@@ -52,6 +54,7 @@ func NewServiceContext(c config.Config) *ServiceContext {
 		UsersModel:         usersModel,
 		RefreshTokensModel: refreshTokensModel,
 		ApplicationsModel:  applicationsModel,
+		ClientsModel:       clientsModel,
 		AccessJWTHelper:    accessJWTHelper,
 		RefreshJWTHelper:   refreshJWTHelper,
 		ClientAuth:         pkgmw.NewJWTMiddleware(publicKeyPEM).Handle,
@@ -72,6 +75,7 @@ func initDB(dataSource string) sqlx.SqlConn {
 		"sql/table_users.sqlite.sql",
 		"sql/table_refresh_tokens.sqlite.sql",
 		"sql/table_applications.sqlite.sql",
+		"sql/table_clients.sqlite.sql",
 	}
 	for _, table := range tables {
 		sqlBytes, err := os.ReadFile(table)

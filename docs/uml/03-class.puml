@@ -108,7 +108,7 @@ package "client (Client 服务)" <<Service>> {
     + pollClientStatus(userId: int64, clientId: int64): ClientStatus
     + bindClient(userId: int64, ilinkUserId: string): error
     + deleteClient(userId: int64, clientId: int64): error
-    + getClients(userId: int64): Client[]
+    + getClients(userId: int64, page: int, pageSize: int): PageResult[Client]
   }
 
   class Client {
@@ -141,10 +141,19 @@ package "client (Client 服务)" <<Service>> {
     + ilinkUserId: string
   }
 
+  class PageResult {
+    + list: T[]
+    + total: int64
+    + page: int
+    + pageSize: int
+    + totalPages: int
+  }
+
   ClientService --> Client : manages
   ClientService --> ClientSession : manages
   ClientService ..> ClientQRResult : returns
   ClientService ..> ClientStatus : returns
+  ClientService ..> PageResult : returns
 }
 
 package "application (Application 服务)" <<Service>> {
@@ -152,7 +161,7 @@ package "application (Application 服务)" <<Service>> {
   class ApplicationService {
     - db: *sql.DB
     + createApplication(userId: int64, name: string, desc: string): Application
-    + getApplications(userId: int64): Application[]
+    + getApplications(userId: int64, page: int, pageSize: int): PageResult[Application]
     + deleteApplication(userId: int64, appId: int64): error
     + validateAppToken(token: string): (int64, error)
     - generateAppToken(): string
@@ -169,6 +178,7 @@ package "application (Application 服务)" <<Service>> {
   }
 
   ApplicationService --> Application : manages
+  ApplicationService ..> PageResult : returns
 }
 
 package "message (Message 服务)" <<Service>> {

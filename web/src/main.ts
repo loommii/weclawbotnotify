@@ -4,6 +4,7 @@ import { VueQueryPlugin } from '@tanstack/vue-query'
 import PrimeVue from 'primevue/config'
 import Aura from '@primeuix/themes/aura'
 import ToastService from 'primevue/toastservice'
+import ConfirmationService from 'primevue/confirmationservice'
 import { queryClient } from '@/lib/query-client'
 import { injectRouter, injectClearAuth } from '@/lib/axios'
 import { useAuthStore } from '@/stores/auth'
@@ -26,6 +27,7 @@ app.use(PrimeVue, {
   },
 })
 app.use(ToastService)
+app.use(ConfirmationService)
 
 injectRouter(router)
 injectClearAuth(() => useAuthStore().clearAuth())

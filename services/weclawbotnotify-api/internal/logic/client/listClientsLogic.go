@@ -26,7 +26,7 @@ func NewListClientsLogic(ctx context.Context, svcCtx *svc.ServiceContext) *ListC
 	}
 }
 
-func (l *ListClientsLogic) ListClients() (resp *types.ListClientsResp, err error) {
+func (l *ListClientsLogic) ListClients(req *types.ListClientsReq) (resp *types.ListClientsResp, err error) {
 	// todo: add your logic here and delete this line
 
 	return

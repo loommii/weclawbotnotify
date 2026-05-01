@@ -96,6 +96,26 @@
         ],
         "summary": "ListApplications",
         "operationId": "applicationListApplications",
+        "parameters": [
+          {
+            "type": "integer",
+            "default": 1,
+            "example": 1,
+            "description": "页码，默认 1",
+            "name": "page",
+            "in": "query",
+            "required": true
+          },
+          {
+            "type": "integer",
+            "default": 20,
+            "example": 20,
+            "description": "每页条数，默认 20",
+            "name": "page_size",
+            "in": "query",
+            "required": true
+          }
+        ],
         "responses": {
           "200": {
             "description": "",
@@ -134,6 +154,34 @@
                         "description": "应用名称",
                         "type": "string"
                       }
+                    }
+                  }
+                },
+                "page_info": {
+                  "description": "分页信息",
+                  "type": "object",
+                  "required": [
+                    "page",
+                    "page_size",
+                    "total",
+                    "total_pages"
+                  ],
+                  "properties": {
+                    "page": {
+                      "description": "当前页码（从1开始）",
+                      "type": "integer"
+                    },
+                    "page_size": {
+                      "description": "每页条数",
+                      "type": "integer"
+                    },
+                    "total": {
+                      "description": "总记录数",
+                      "type": "integer"
+                    },
+                    "total_pages": {
+                      "description": "总页数",
+                      "type": "integer"
                     }
                   }
                 }
@@ -467,6 +515,26 @@
         ],
         "summary": "ListClients",
         "operationId": "clientListClients",
+        "parameters": [
+          {
+            "type": "integer",
+            "default": 1,
+            "example": 1,
+            "description": "页码，默认 1",
+            "name": "page",
+            "in": "query",
+            "required": true
+          },
+          {
+            "type": "integer",
+            "default": 20,
+            "example": 20,
+            "description": "每页条数，默认 20",
+            "name": "page_size",
+            "in": "query",
+            "required": true
+          }
+        ],
         "responses": {
           "200": {
             "description": "",
@@ -505,6 +573,34 @@
                         "description": "状态",
                         "type": "string"
                       }
+                    }
+                  }
+                },
+                "page_info": {
+                  "description": "分页信息",
+                  "type": "object",
+                  "required": [
+                    "page",
+                    "page_size",
+                    "total",
+                    "total_pages"
+                  ],
+                  "properties": {
+                    "page": {
+                      "description": "当前页码（从1开始）",
+                      "type": "integer"
+                    },
+                    "page_size": {
+                      "description": "每页条数",
+                      "type": "integer"
+                    },
+                    "total": {
+                      "description": "总记录数",
+                      "type": "integer"
+                    },
+                    "total_pages": {
+                      "description": "总页数",
+                      "type": "integer"
                     }
                   }
                 }
@@ -921,7 +1017,7 @@
       }
     }
   },
-  "x-date": "2026-05-01 01:25:45",
+  "x-date": "2026-05-01 20:27:49",
   "x-description": "This is a goctl generated swagger file.",
   "x-github": "https://github.com/zeromicro/go-zero",
   "x-go-zero-doc": "https://go-zero.dev/",

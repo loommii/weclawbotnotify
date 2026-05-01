@@ -89,12 +89,24 @@ type HealthResp struct {
 	Message     string `json:"message"`      // 响应消息，e.g. "ok"
 }
 
+type ListApplicationsReq struct {
+	Page     int `form:"page,default=1"`       // 页码，默认 1
+	PageSize int `form:"page_size,default=20"` // 每页条数，默认 20
+}
+
 type ListApplicationsResp struct {
-	List []ApplicationInfo `json:"list"` // 应用列表
+	PageInfo PageInfo          `json:"page_info"` // 分页信息
+	List     []ApplicationInfo `json:"list"`      // 应用列表
+}
+
+type ListClientsReq struct {
+	Page     int `form:"page,default=1"`       // 页码，默认 1
+	PageSize int `form:"page_size,default=20"` // 每页条数，默认 20
 }
 
 type ListClientsResp struct {
-	List []ClientInfo `json:"list"` // 客户端列表
+	PageInfo PageInfo     `json:"page_info"` // 分页信息
+	List     []ClientInfo `json:"list"`      // 客户端列表
 }
 
 type ListMessagesReq struct {
@@ -124,6 +136,13 @@ type MessageInfo struct {
 	Message       string `json:"message"`        // 消息内容
 	Priority      int32  `json:"priority"`       // 优先级
 	Date          string `json:"date"`           // 消息日期
+}
+
+type PageInfo struct {
+	Page       int   `json:"page"`        // 当前页码（从1开始）
+	PageSize   int   `json:"page_size"`   // 每页条数
+	Total      int64 `json:"total"`       // 总记录数
+	TotalPages int   `json:"total_pages"` // 总页数
 }
 
 type PollClientStatusReq struct {

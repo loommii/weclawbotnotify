@@ -77,6 +77,21 @@ paths:
   /api/application/list:
     get:
       operationId: applicationListApplications
+      parameters:
+      - default: 1
+        description: 页码，默认 1
+        example: 1
+        in: query
+        name: page
+        required: true
+        type: integer
+      - default: 20
+        description: 每页条数，默认 20
+        example: 20
+        in: query
+        name: page_size
+        required: true
+        type: integer
       produces:
       - application/json
       responses:
@@ -110,6 +125,27 @@ paths:
                   - created_at
                   type: object
                 type: array
+              page_info:
+                description: 分页信息
+                properties:
+                  page:
+                    description: 当前页码（从1开始）
+                    type: integer
+                  page_size:
+                    description: 每页条数
+                    type: integer
+                  total:
+                    description: 总记录数
+                    type: integer
+                  total_pages:
+                    description: 总页数
+                    type: integer
+                required:
+                - page
+                - page_size
+                - total
+                - total_pages
+                type: object
             type: object
       schemes:
       - https
@@ -328,6 +364,21 @@ paths:
   /api/client/list:
     get:
       operationId: clientListClients
+      parameters:
+      - default: 1
+        description: 页码，默认 1
+        example: 1
+        in: query
+        name: page
+        required: true
+        type: integer
+      - default: 20
+        description: 每页条数，默认 20
+        example: 20
+        in: query
+        name: page_size
+        required: true
+        type: integer
       produces:
       - application/json
       responses:
@@ -361,6 +412,27 @@ paths:
                   - created_at
                   type: object
                 type: array
+              page_info:
+                description: 分页信息
+                properties:
+                  page:
+                    description: 当前页码（从1开始）
+                    type: integer
+                  page_size:
+                    description: 每页条数
+                    type: integer
+                  total:
+                    description: 总记录数
+                    type: integer
+                  total_pages:
+                    description: 总页数
+                    type: integer
+                required:
+                - page
+                - page_size
+                - total
+                - total_pages
+                type: object
             type: object
       schemes:
       - https
@@ -625,7 +697,7 @@ produces:
 schemes:
 - http
 swagger: "2.0"
-x-date: "2026-05-01 01:25:59"
+x-date: "2026-05-01 20:27:53"
 x-description: This is a goctl generated swagger file.
 x-github: https://github.com/zeromicro/go-zero
 x-go-zero-doc: https://go-zero.dev/

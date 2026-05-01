@@ -19,6 +19,14 @@ type HealthResp {
 	Message     string `json:"message"` // 响应消息，e.g. "ok"
 }
 
+// PageInfo 分页信息
+type PageInfo {
+	Page       int   `json:"page"` // 当前页码（从1开始）
+	PageSize   int   `json:"page_size"` // 每页条数
+	Total      int64 `json:"total"` // 总记录数
+	TotalPages int   `json:"total_pages"` // 总页数
+}
+
 // ==================== 认证相关 ====================
 type (
 	// RegisterReq 注册请求
@@ -109,9 +117,15 @@ type (
 		IlinkUserId string `json:"ilink_user_id,optional"` // iLink 用户 ID
 		CreatedAt   string `json:"created_at"` // 创建时间
 	}
+	// ListClientsReq 客户端列表请求
+	ListClientsReq {
+		Page     int `form:"page,default=1"` // 页码，默认 1
+		PageSize int `form:"page_size,default=20"` // 每页条数，默认 20
+	}
 	// ListClientsResp 客户端列表响应
 	ListClientsResp {
-		List []ClientInfo `json:"list"` // 客户端列表
+		PageInfo PageInfo     `json:"page_info"` // 分页信息
+		List     []ClientInfo `json:"list"` // 客户端列表
 	}
 )
 
@@ -137,9 +151,15 @@ type (
 		CreatedAt   string `json:"created_at"` // 创建时间
 		LastUsedAt  string `json:"last_used_at,optional"` // 最后使用时间
 	}
+	// ListApplicationsReq 应用列表请求
+	ListApplicationsReq {
+		Page     int `form:"page,default=1"` // 页码，默认 1
+		PageSize int `form:"page_size,default=20"` // 每页条数，默认 20
+	}
 	// ListApplicationsResp 应用列表响应
 	ListApplicationsResp {
-		List []ApplicationInfo `json:"list"` // 应用列表
+		PageInfo PageInfo          `json:"page_info"` // 分页信息
+		List     []ApplicationInfo `json:"list"` // 应用列表
 	}
 	// DeleteApplicationReq 删除应用请求
 	DeleteApplicationReq {
@@ -239,7 +259,7 @@ service weclawbotnotify-api {
 	get /status (PollClientStatusReq) returns (PollClientStatusResp)
 
 	@handler ListClients
-	get /list returns (ListClientsResp)
+	get /list (ListClientsReq) returns (ListClientsResp)
 
 	@handler DeleteClient
 	delete /:id (DeleteClientReq) returns (DeleteClientResp)
@@ -257,7 +277,7 @@ service weclawbotnotify-api {
 	post /create (CreateApplicationReq) returns (CreateApplicationResp)
 
 	@handler ListApplications
-	get /list returns (ListApplicationsResp)
+	get /list (ListApplicationsReq) returns (ListApplicationsResp)
 
 	@handler DeleteApplication
 	delete /:id (DeleteApplicationReq) returns (DeleteApplicationResp)

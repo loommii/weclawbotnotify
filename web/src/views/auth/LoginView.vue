@@ -11,6 +11,16 @@
         </p>
       </div>
 
+      <Message
+        v-if="serverOffline"
+        severity="error"
+        size="small"
+        variant="simple"
+        class="mb-5"
+      >
+        无法连接到服务器，请检查后端是否运行
+      </Message>
+
       <form @submit.prevent="handleLogin" class="flex flex-col gap-5">
         <div class="flex flex-col gap-1.5">
           <label for="username" class="text-xs font-medium text-muted-color">
@@ -91,7 +101,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
+import { ref, reactive, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import InputText from 'primevue/inputtext'
 import Password from 'primevue/password'
@@ -99,6 +109,7 @@ import Button from 'primevue/button'
 import Message from 'primevue/message'
 import { useAuthStore } from '@/stores/auth'
 import { authService } from '@/services/auth.service'
+import { healthService } from '@/services/health.service'
 import { loginSchema } from '@/schemas/login.schema'
 import type { LoginFormState } from '@/types/auth'
 
@@ -114,6 +125,26 @@ const form = reactive<LoginFormState>({
 const errors = reactive<{ username?: string; password?: string }>({})
 const authError = ref('')
 const loading = ref(false)
+const serverOffline = ref(false)
+let healthTimer: ReturnType<typeof setInterval> | null = null
+
+onMounted(async () => {
+  async function checkHealth() {
+    try {
+      await healthService.check()
+      serverOffline.value = false
+    } catch {
+      serverOffline.value = true
+    }
+  }
+
+  checkHealth()
+  healthTimer = setInterval(checkHealth, 5000)
+})
+
+onUnmounted(() => {
+  if (healthTimer) clearInterval(healthTimer)
+})
 
 async function handleLogin() {
   errors.username = undefined

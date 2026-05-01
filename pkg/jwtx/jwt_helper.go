@@ -1,9 +1,12 @@
 package jwtx
 
 import (
+	"context"
 	"crypto/rsa"
+	"fmt"
 	"net/http"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -118,4 +121,20 @@ func ParseRSAPublicKeyFromPath(path string) (*rsa.PublicKey, []byte, error) {
 		return nil, nil, err
 	}
 	return publicKey, publicKeyPEM, err
+}
+
+// GetUserIdFromContext 从 context 中的 JWT Claims 解析用户 ID
+// 需要配合 JWTMiddleware 使用，中间件会将 claims 存入 context
+func GetUserIdFromContext(ctx context.Context, claimsKey any) (int64, error) {
+	claims, ok := ctx.Value(claimsKey).(*JWTClaims)
+	if !ok || claims == nil {
+		return 0, fmt.Errorf("jwt claims not found in context")
+	}
+
+	userId, err := strconv.ParseInt(claims.UID, 10, 64)
+	if err != nil {
+		return 0, fmt.Errorf("invalid user id format: %s", claims.UID)
+	}
+
+	return userId, nil
 }

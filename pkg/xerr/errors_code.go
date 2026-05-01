@@ -40,5 +40,17 @@ var (
 	PasswordTooWeak = NewCodeError(110400, "密码强度不足，至少8位且包含大小写字母和数字")
 )
 
+// Application 管理错误 1105XX
+var (
+	ApplicationParamNameEmpty = NewCodeError(110500, "应用名称不能为空")
+	ApplicationInsertFailed   = NewCodeError(110501, "创建应用失败")
+	ApplicationGetIdFailed    = NewCodeError(110502, "获取应用ID失败")
+	ApplicationTokenFailed    = NewCodeError(110503, "生成应用Token失败")
+	ApplicationNotFound       = NewCodeError(110504, "应用不存在")
+	ApplicationNoPermission   = NewCodeError(110505, "无权操作该应用")
+	ApplicationQueryFailed    = NewCodeError(110506, "查询应用失败")
+	ApplicationDeleteFailed   = NewCodeError(110507, "删除应用失败")
+)
+
 // 第三方错误 20XXXX
 var ()

@@ -1,6 +1,7 @@
 package jwtx
 
 import (
+	"context"
 	"crypto/rsa"
 	"testing"
 	"time"
@@ -316,5 +317,74 @@ func TestAccessTokenRejectedAsRefresh(t *testing.T) {
 	}
 	if parsedClaims.IsRefreshToken() {
 		t.Error("Access Token 不应被识别为 Refresh Token")
+	}
+}
+
+// TestGetUserIdFromContext 测试从 context 中解析用户 ID
+func TestGetUserIdFromContext(t *testing.T) {
+	type contextKey string
+	claimsKey := contextKey("claims")
+
+	tests := []struct {
+		name        string
+		ctx         context.Context
+		wantUserId  int64
+		wantErr     bool
+		errContains string
+	}{
+		{
+			name: "正常解析",
+			ctx: context.WithValue(context.Background(), claimsKey, &JWTClaims{
+				UID:       "123",
+				TokenType: Access,
+			}),
+			wantUserId: 123,
+			wantErr:    false,
+		},
+		{
+			name:        "claims 为 nil",
+			ctx:         context.WithValue(context.Background(), claimsKey, (*JWTClaims)(nil)),
+			wantErr:     true,
+			errContains: "jwt claims not found",
+		},
+		{
+			name:        "claims 缺失",
+			ctx:         context.Background(),
+			wantErr:     true,
+			errContains: "jwt claims not found",
+		},
+		{
+			name: "UID 格式错误",
+			ctx: context.WithValue(context.Background(), claimsKey, &JWTClaims{
+				UID:       "not_a_number",
+				TokenType: Access,
+			}),
+			wantErr:     true,
+			errContains: "invalid user id format",
+		},
+		{
+			name:        "claims 类型不匹配",
+			ctx:         context.WithValue(context.Background(), claimsKey, "wrong_type"),
+			wantErr:     true,
+			errContains: "jwt claims not found",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			userId, err := GetUserIdFromContext(tt.ctx, claimsKey)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("GetUserIdFromContext() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if tt.wantErr && tt.errContains != "" {
+				if err == nil || err.Error() == "" {
+					t.Errorf("expected error containing %q, got %v", tt.errContains, err)
+				}
+			}
+			if !tt.wantErr && userId != tt.wantUserId {
+				t.Errorf("GetUserIdFromContext() userId = %v, want %v", userId, tt.wantUserId)
+			}
+		})
 	}
 }

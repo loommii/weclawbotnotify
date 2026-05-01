@@ -7,6 +7,7 @@ import (
 
 	"weclawbotnotify/pkg/jwtx"
 	pkgmw "weclawbotnotify/pkg/middleware"
+	"weclawbotnotify/services/ilink/ilinkclient"
 	"weclawbotnotify/services/weclawbotnotify-api/internal/config"
 	localmw "weclawbotnotify/services/weclawbotnotify-api/internal/middleware"
 	"weclawbotnotify/services/weclawbotnotify-api/internal/model"
@@ -16,22 +17,26 @@ import (
 	"github.com/zeromicro/go-zero/core/logx"
 	"github.com/zeromicro/go-zero/core/stores/sqlx"
 	"github.com/zeromicro/go-zero/rest"
+	"github.com/zeromicro/go-zero/zrpc"
 )
 
 type ServiceContext struct {
 	Config             config.Config
 	UsersModel         model.UsersModel
 	RefreshTokensModel model.RefreshTokensModel
+	ApplicationsModel  model.ApplicationsModel
 	AccessJWTHelper    *jwtx.JWTHelper
 	RefreshJWTHelper   *jwtx.JWTHelper
 	ClientAuth         rest.Middleware
 	ApplicationAuth    rest.Middleware
+	IlinkRpc           ilinkclient.Ilink
 }
 
 func NewServiceContext(c config.Config) *ServiceContext {
 	conn := initDB(c.DataSource)
 	usersModel := model.NewUsersModel(conn)
 	refreshTokensModel := model.NewRefreshTokensModel(conn)
+	applicationsModel := model.NewApplicationsModel(conn)
 	accessJWTHelper, refreshJWTHelper := initJWT(c.Auth)
 
 	publicKeyPEM, err := os.ReadFile(c.Auth.PublicKeyPath)
@@ -39,18 +44,22 @@ func NewServiceContext(c config.Config) *ServiceContext {
 		logx.Must(err)
 	}
 
+	ilinkRpcClient := ilinkclient.NewIlink(zrpc.MustNewClient(c.IlinkRpc))
+	logx.Infof("[api-svc] ilink rpc client initialized")
+
 	return &ServiceContext{
 		Config:             c,
 		UsersModel:         usersModel,
 		RefreshTokensModel: refreshTokensModel,
+		ApplicationsModel:  applicationsModel,
 		AccessJWTHelper:    accessJWTHelper,
 		RefreshJWTHelper:   refreshJWTHelper,
 		ClientAuth:         pkgmw.NewJWTMiddleware(publicKeyPEM).Handle,
 		ApplicationAuth:    localmw.NewApplicationAuthMiddleware().Handle,
+		IlinkRpc:           ilinkRpcClient,
 	}
 }
 
-// initDB 初始化数据库连接并自动建表
 func initDB(dataSource string) sqlx.SqlConn {
 	dir := filepath.Dir(dataSource)
 	if dir != "." {
@@ -59,10 +68,10 @@ func initDB(dataSource string) sqlx.SqlConn {
 
 	conn := sqlx.NewSqlConn("sqlite", dataSource+"?_pragma=foreign_keys(1)&_pragma=journal_mode(WAL)&_pragma=synchronous(NORMAL)&_pragma=busy_timeout(5000)")
 
-	// 依次执行建表 SQL
 	tables := []string{
 		"sql/table_users.sqlite.sql",
 		"sql/table_refresh_tokens.sqlite.sql",
+		"sql/table_applications.sqlite.sql",
 	}
 	for _, table := range tables {
 		sqlBytes, err := os.ReadFile(table)
@@ -77,7 +86,6 @@ func initDB(dataSource string) sqlx.SqlConn {
 	return conn
 }
 
-// initJWT 初始化双令牌 JWTHelper（RSA 签名）
 func initJWT(c config.AuthConfig) (*jwtx.JWTHelper, *jwtx.JWTHelper) {
 	if c.RefreshExpire <= c.AccessExpire {
 		logx.Must(fmt.Errorf("RefreshExpire (%v) 必须大于 AccessExpire (%v)", c.RefreshExpire, c.AccessExpire))

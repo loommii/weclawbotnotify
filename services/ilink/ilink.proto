@@ -1,0 +1,85 @@
+syntax = "proto3";
+
+package ilink;
+
+option go_package = "weclawbotnotify/services/ilink/ilink";
+
+// ==================== 请求/响应消息 ====================
+
+message GetQRCodeReq {
+  int32 bot_type = 1;
+}
+
+message GetQRCodeResp {
+  string qrcode = 1;
+  string qrcode_img_content = 2;
+}
+
+message PollQRCodeStatusReq {
+  string qrcode = 1;
+}
+
+message PollQRCodeStatusResp {
+  string status = 1;
+  string bot_token = 2;
+  string ilink_bot_id = 3;
+  string base_url = 4;
+  string ilink_user_id = 5;
+}
+
+message SendMessageReq {
+  string bot_token = 1;
+  string base_url = 2;
+  string to_user_id = 3;
+  string text = 4;
+  string context_token = 5;
+}
+
+message SendMessageResp {
+  int32 ret = 1;
+  string err_msg = 2;
+}
+
+message GetUpdatesReq {
+  string bot_token = 1;
+  string base_url = 2;
+  string get_updates_buf = 3;
+}
+
+message GetUpdatesResp {
+  int32 ret = 1;
+  int32 err_code = 2;
+  string err_msg = 3;
+  string get_updates_buf = 4;
+  int32 long_polling_timeout_ms = 5;
+  repeated WeixinMessage msgs = 6;
+}
+
+message WeixinMessage {
+  int32 seq = 1;
+  int64 message_id = 2;
+  string from_user_id = 3;
+  string to_user_id = 4;
+  int32 message_type = 5;
+  int32 message_state = 6;
+  repeated MessageItem item_list = 7;
+  string context_token = 8;
+}
+
+message MessageItem {
+  int32 type = 1;
+  TextItem text_item = 2;
+}
+
+message TextItem {
+  string text = 1;
+}
+
+// ==================== RPC 服务 ====================
+
+service Ilink {
+  rpc GetQRCode(GetQRCodeReq) returns (GetQRCodeResp);
+  rpc PollQRCodeStatus(PollQRCodeStatusReq) returns (PollQRCodeStatusResp);
+  rpc SendMessage(SendMessageReq) returns (SendMessageResp);
+  rpc GetUpdates(GetUpdatesReq) returns (GetUpdatesResp);
+}

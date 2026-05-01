@@ -1,0 +1,13 @@
+Name: ilink.rpc
+ListenOn: 0.0.0.0:48751
+
+Log:
+  ServiceName: ilink-rpc
+  Mode: file
+  Path: logs
+  Level: info
+  KeepDays: 7
+  Compress: true
+
+Ilink:
+  BaseURL: https://ilinkai.weixin.qq.com

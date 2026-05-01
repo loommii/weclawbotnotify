@@ -133,7 +133,7 @@ package "Message 服务 (通知推送)" {
   note right of MsgSvc
     通知推送核心
     ===
-    createMessage(appToken, title, text, priority) → Message
+    createMessage(appToken, title, text) → Message
     getMessages(userId, limit, since) → Message[]
     deleteMessage(userId, msgId)
     ===
@@ -200,13 +200,13 @@ database "SQLite" as DB {
     artifact "applications" as AppsTable
     note right of AppsTable
       id, user_id, token, name
-      description, default_priority
+      description
       created_at, last_used_at
     end note
     artifact "messages" as MessagesTable
     note right of MessagesTable
       id, application_id, title
-      message, priority, date
+      message, date
     end note
   }
 }

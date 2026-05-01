@@ -32,8 +32,6 @@ activate AppSvc
 
 AppSvc -> AppSvc : generateAppToken()\n生成随机 Token (如 app_xxx...)
 
-AppSvc -> AppSvc : hashToken(token)\n存储 hash 而非明文
-
 AppSvc -> DB : INSERT INTO applications\n(user_id, token, name, description, created_at)\nVALUES (?, ?, ?, ?, ?)
 activate DB
 DB --> AppSvc : appId
@@ -41,8 +39,8 @@ deactivate DB
 
 AppSvc --> API : Application { id, token (明文仅此一次), name, description }
 note right
-  Token 明文仅在创建时返回一次
-  之后只存储 hash
+  Token 为随机字符串，明文存储
+  仅在创建时返回一次给用户
   用户必须妥善保存
 end note
 deactivate AppSvc
@@ -69,7 +67,7 @@ deactivate ClientAuth
 API -> AppSvc : getApplications(userId)
 activate AppSvc
 
-AppSvc -> DB : SELECT id, name, description,\n  default_priority, created_at, last_used_at\nFROM applications\nWHERE user_id = ?
+AppSvc -> DB : SELECT id, name, description,\n  created_at, last_used_at\nFROM applications\nWHERE user_id = ?
 activate DB
 DB --> AppSvc : rows
 deactivate DB

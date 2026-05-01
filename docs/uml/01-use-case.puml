@@ -68,7 +68,7 @@ note right of UC_NOTIFY_TEXT
   ===
   POST /api/notify
   Authorization: Bearer {appToken}
-  { title, message, priority }
+  { title, message }
   ===
   消息通过 Client (微信Bot)
   推送到用户微信

@@ -119,7 +119,7 @@ package "client (Client 服务)" <<Service>> {
     + ilinkUserId: string
     + status: string
     + createdAt: time.Time
-    + lastUsedAt: time.Time
+    + lastUsedAt: *time.Time
   }
 
   class ClientSession {
@@ -156,7 +156,6 @@ package "application (Application 服务)" <<Service>> {
     + deleteApplication(userId: int64, appId: int64): error
     + validateAppToken(token: string): (int64, error)
     - generateAppToken(): string
-    - hashToken(token: string): string
   }
 
   class Application {
@@ -165,9 +164,8 @@ package "application (Application 服务)" <<Service>> {
     + token: string
     + name: string
     + description: string
-    + defaultPriority: int
     + createdAt: time.Time
-    + lastUsedAt: time.Time
+    + lastUsedAt: *time.Time
   }
 
   ApplicationService --> Application : manages
@@ -180,7 +178,7 @@ package "message (Message 服务)" <<Service>> {
     - clientSvc: ClientService
     - appSvc: ApplicationService
     - db: *sql.DB
-    + createMessage(appId: int64, title: string, text: string, priority: int): Message
+    + createMessage(appId: int64, title: string, text: string): Message
     + getMessages(userId: int64, limit: int, since: int64): Message[]
     + deleteMessage(userId: int64, msgId: int64): error
     - pushToAllClients(userId: int64, msg: Message): void
@@ -191,7 +189,6 @@ package "message (Message 服务)" <<Service>> {
     + applicationId: int64
     + title: string
     + message: string
-    + priority: int
     + date: time.Time
   }
 

@@ -13,7 +13,7 @@ participant "SQLite" as DB
 participant "微信 iLink 服务器" as WeChat
 actor "用户微信" as UserWeChat
 
-Ext -> API : POST /api/message\n{ title, message, priority }\nAuthorization: Bearer {appToken}
+Ext -> API : POST /api/message\n{ title, message }\nAuthorization: Bearer {appToken}
 activate API
 
 API -> AppAuth : authenticate(request)
@@ -42,10 +42,10 @@ end
 AppAuth --> API : authenticated(userId, appId)
 deactivate AppAuth
 
-API -> MsgSvc : createMessage(appId, title, text, priority)
+API -> MsgSvc : createMessage(appId, title, text)
 activate MsgSvc
 
-MsgSvc -> DB : INSERT INTO messages\n(application_id, title, message, priority, date)\nVALUES (?, ?, ?, ?, ?)
+MsgSvc -> DB : INSERT INTO messages\n(application_id, title, message, date)\nVALUES (?, ?, ?, ?)
 activate DB
 DB --> MsgSvc : messageId
 deactivate DB
@@ -86,7 +86,7 @@ end
 MsgSvc --> API : Message { id, status: "ok" }
 deactivate MsgSvc
 
-API --> Ext : 200 OK\n{ id, title, message, priority, date }
+API --> Ext : 200 OK\n{ id, title, message, date }
 deactivate API
 
 WeChat -> UserWeChat : 推送通知到微信

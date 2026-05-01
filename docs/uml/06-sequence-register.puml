@@ -143,8 +143,8 @@ deactivate DB
 
 AppSvc --> API : Application { id, token (明文仅此一次), name }
 note right
-  Token 明文仅在创建时返回一次
-  之后只存储 hash
+  Token 为随机字符串，明文存储
+  仅在创建时返回一次给用户
   用户必须妥善保存
 end note
 deactivate AppSvc

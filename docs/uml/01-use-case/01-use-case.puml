@@ -1,0 +1,61 @@
+@startuml WeClawBotNotify_UseCase
+
+left to right direction
+skinparam packageStyle rectangle
+skinparam actorStyle awesome
+skinparam linetype ortho
+
+title WeClawBotNotify V1 - 用例图\n(单用户 · 微信通知推送 · 双令牌认证)
+
+rectangle "WeClawBotNotify 消息通知系统" {
+
+  package "公开接口 (无需鉴权)" {
+    usecase "注册账号" as UC_REGISTER
+    usecase "登录管理后台" as UC_LOGIN
+    usecase "刷新令牌" as UC_REFRESH
+  }
+
+  package "管理后台 (Client Auth)" {
+    usecase "注销登录" as UC_LOGOUT
+    usecase "修改密码" as UC_CHANGE_PWD
+    usecase "创建 Client" as UC_CREATE_CLIENT
+    usecase "查询 Client 状态" as UC_POLL_CLIENT
+    usecase "查看 Client 列表" as UC_LIST_CLIENTS
+    usecase "删除 Client" as UC_DELETE_CLIENT
+    usecase "创建 Application" as UC_CREATE_APP
+    usecase "查看 Application 列表" as UC_LIST_APPS
+    usecase "查看 Application Token" as UC_VIEW_APP_TOKEN
+    usecase "禁用/启用 Application" as UC_TOGGLE_APP
+    usecase "删除 Application" as UC_DELETE_APP
+    usecase "查看通知记录" as UC_HISTORY
+    usecase "删除通知" as UC_DELETE_MSG
+  }
+
+  package "推送 API (Application Auth)" {
+    usecase "推送文本通知" as UC_NOTIFY_TEXT
+  }
+}
+
+actor "用户\n(V1仅1个)" as User
+actor "外部系统\n(CI/CD/监控/告警)" as External
+
+User --> UC_REGISTER
+User --> UC_LOGIN
+User --> UC_REFRESH
+User --> UC_LOGOUT
+User --> UC_CHANGE_PWD
+User --> UC_CREATE_CLIENT
+User --> UC_POLL_CLIENT
+User --> UC_LIST_CLIENTS
+User --> UC_DELETE_CLIENT
+User --> UC_CREATE_APP
+User --> UC_LIST_APPS
+User --> UC_VIEW_APP_TOKEN
+User --> UC_TOGGLE_APP
+User --> UC_DELETE_APP
+User --> UC_HISTORY
+User --> UC_DELETE_MSG
+
+External --> UC_NOTIFY_TEXT
+
+@enduml

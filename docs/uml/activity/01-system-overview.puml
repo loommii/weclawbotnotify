@@ -94,6 +94,13 @@ fork again
           :ApplicationService.getApplications();
         case (DELETE /api/application/:id)
           :ApplicationService.deleteApplication();
+          note right
+            软删除：
+            UPDATE applications
+            SET status = -1
+            WHERE id = ?
+            不删除 Messages 表数处理据
+          end note
         case (GET /api/message)
           :MessageService.getMessages();
         case (DELETE /api/message/:id)

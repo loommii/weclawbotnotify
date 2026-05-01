@@ -1,0 +1,156 @@
+@startuml WeClawBotNotify_NotifySequence
+
+title WeClawBotNotify V1 - 推送通知 (Create Message) 序列图
+
+actor "外部系统\n(CI/CD/监控)" as Ext
+participant "server/HTTPServer" as API
+participant "message/CreateMessageLogic" as Logic
+participant "application/ApplicationsModel" as AppModel
+participant "message/MessagesModel" as MsgModel
+participant "client/ClientsModel" as ClientModel
+participant "ilink/WeixinApiClient" as ILClient
+participant "SQLite" as DB
+participant "微信 iLink 服务器" as WeChat
+actor "用户微信" as UserWeChat
+
+Ext -> API : POST /api/message/push\n{ app_token, title, message }
+activate API
+
+API -> Logic : CreateMessage(req)
+activate Logic
+
+Logic -> AppModel : ValidateAppToken(app_token)
+activate AppModel
+AppModel -> DB : SELECT * FROM applications\nWHERE token = ?
+activate DB
+DB --> AppModel : app | null
+deactivate DB
+
+alt Token 不存在
+  AppModel --> Logic : ErrNotFound
+  Logic --> API : 200 { code: 110508, msg: "应用Token无效或已失效" }
+  deactivate AppModel
+  deactivate Logic
+  deactivate API
+  return
+else Token 存在但状态异常 (status != 1)
+  AppModel --> Logic : ErrNotFound
+  Logic --> API : 200 { code: 110508, msg: "应用Token无效或已失效" }
+  deactivate AppModel
+  deactivate Logic
+  deactivate API
+  return
+end
+
+AppModel --> Logic : app (status=1)
+deactivate AppModel
+
+note over Logic, DB
+  更新应用最后使用时间
+end note
+
+Logic -> AppModel : Update(app)
+activate AppModel
+AppModel -> DB : UPDATE applications\nSET last_used_at = ?\nWHERE id = ?
+activate DB
+DB --> AppModel : ok
+deactivate DB
+AppModel --> Logic : ok
+deactivate AppModel
+
+Logic -> ClientModel : FindByUserIdWithPagination(userId, 0, 100)
+activate ClientModel
+ClientModel -> DB : SELECT * FROM clients\nWHERE user_id = ?
+activate DB
+DB --> ClientModel : Client[]
+deactivate DB
+ClientModel --> Logic : Client[]
+deactivate ClientModel
+
+alt 无已绑定 Client
+  Logic --> API : 200 { code: 110601, msg: "无可用推送终端" }
+  deactivate Logic
+  deactivate API
+  return
+end
+
+note over Logic, DB
+  事务开始
+  1. INSERT INTO messages (status=100 待推送)
+  2. 遍历推送完成后更新 status
+  事务提交/回滚
+end note
+
+Logic -> MsgModel : Insert(message)
+activate MsgModel
+MsgModel -> DB : INSERT INTO messages\n(application_id, title, message, status, date)\nVALUES (?, ?, ?, 100, ?)
+activate DB
+DB --> MsgModel : messageId
+deactivate DB
+MsgModel --> Logic : messageId
+deactivate MsgModel
+
+loop 遍历用户所有已绑定 Client
+  Logic -> ILClient : sendMessage({\n  to_user_id: client.ilinkUserId,\n  text: title + ": " + message,\n  context_token: ""\n})
+  note right
+    context_token 为空
+    独立消息，非对话回复
+  end note
+
+  activate ILClient
+  ILClient -> WeChat : POST /ilink/bot/sendmessage\nAuthorization: Bearer {bot_token}
+  activate WeChat
+
+  alt 推送成功
+    WeChat --> ILClient : { ret: 0 }
+    deactivate WeChat
+    ILClient --> Logic : success
+    deactivate ILClient
+  else 推送失败
+    WeChat --> ILClient : { ret: error }
+    deactivate WeChat
+    ILClient --> Logic : error
+    deactivate ILClient
+  end
+end
+
+alt 全部推送成功
+  Logic -> MsgModel : UpdateStatus(messageId, 200)
+  activate MsgModel
+  MsgModel -> DB : UPDATE messages\nSET status = 200\nWHERE id = ?
+  activate DB
+  DB --> MsgModel : ok
+  deactivate DB
+  MsgModel --> Logic : ok
+  deactivate MsgModel
+  Logic --> API : Message { id, status: 200 }
+else 部分推送失败
+  Logic -> MsgModel : UpdateStatus(messageId, 304)
+  activate MsgModel
+  MsgModel -> DB : UPDATE messages\nSET status = 304\nWHERE id = ?
+  activate DB
+  DB --> MsgModel : ok
+  deactivate DB
+  MsgModel --> Logic : ok
+  deactivate MsgModel
+  Logic --> API : Message { id, status: 304 }
+else 全部推送失败
+  Logic -> MsgModel : UpdateStatus(messageId, 300)
+  activate MsgModel
+  MsgModel -> DB : UPDATE messages\nSET status = 300\nWHERE id = ?
+  activate DB
+  DB --> MsgModel : ok
+  deactivate DB
+  MsgModel --> Logic : ok
+  deactivate MsgModel
+  Logic --> API : Message { id, status: 300 }
+end
+
+deactivate Logic
+
+API --> Ext : 200 OK\n{ id, title, message, status, date }
+deactivate API
+
+WeChat -> UserWeChat : 推送通知到微信
+
+@enduml

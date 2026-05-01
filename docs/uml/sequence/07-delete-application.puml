@@ -1,0 +1,107 @@
+@startuml WeClawBotNotify_DeleteApplicationSequence
+
+title WeClawBotNotify V1 - 删除应用 (软删除) 序列图
+
+actor "用户\n(管理后台)" as User
+participant "server/HTTPServer" as API
+participant "middleware/ClientAuth" as ClientAuth
+participant "application/DeleteApplicationLogic" as AppLogic
+participant "application/ApplicationsModel" as AppModel
+participant "SQLite" as DB
+
+User -> API : DELETE /api/application/{id}\nAuthorization: Bearer {accessToken}
+activate API
+
+API -> ClientAuth : authenticate(request)
+activate ClientAuth
+
+ClientAuth -> ClientAuth : 验证 Access Token (JWT)
+alt Token 无效或过期
+  ClientAuth --> API : 401 Unauthorized
+  API --> User : 401 { code: 100001, msg: "Unauthorized" }
+  deactivate ClientAuth
+  deactivate API
+  return
+end
+
+ClientAuth --> API : userId (从 JWT 提取)
+deactivate ClientAuth
+
+API -> AppLogic : DeleteApplication({id: appId})
+activate AppLogic
+
+AppLogic -> AppLogic : 参数校验：appId > 0
+
+AppLogic -> AppModel : FindOne(ctx, appId)
+activate AppModel
+AppModel -> DB : SELECT id, user_id, token, name,\nstatus FROM applications\nWHERE id = ?
+activate DB
+DB --> AppModel : Application 记录 | sqlx.ErrNotFound
+deactivate DB
+
+alt 应用不存在
+  AppModel --> AppLogic : ErrNotFound
+  AppLogic --> API : 200 { code: 110504, msg: "应用不存在" }
+  API --> User : 200 OK\n{ code: 110504, msg: "应用不存在" }
+  deactivate AppModel
+  deactivate AppLogic
+  deactivate API
+  return
+end
+
+AppModel --> AppLogic : Application { userId, status, ... }
+deactivate AppModel
+
+AppLogic -> AppLogic : 权限校验：app.userId == userId
+alt 无权操作（非应用所有者）
+  AppLogic --> API : 200 { code: 110505, msg: "无权操作该应用" }
+  API --> User : 200 OK\n{ code: 110505, msg: "无权操作该应用" }
+  deactivate AppLogic
+  deactivate API
+  return
+end
+
+AppLogic -> AppLogic : 检查是否已删除：status == -1
+alt 应用已删除
+  AppLogic --> API : 200 { code: 110504, msg: "应用不存在" }
+  API --> User : 200 OK\n{ code: 110504, msg: "应用不存在" }
+  deactivate AppLogic
+  deactivate API
+  return
+end
+
+AppLogic -> AppModel : UpdateStatus(ctx, appId, -1)
+activate AppModel
+AppModel -> DB : UPDATE applications\nSET status = -1\nWHERE id = ? AND status != -1
+activate DB
+DB --> AppModel : rows affected
+deactivate DB
+AppModel --> AppLogic : error (if any)
+deactivate AppModel
+
+alt 更新失败
+  AppLogic --> API : 200 { code: 110507, msg: "删除应用失败" }
+  API --> User : 200 OK\n{ code: 110507, msg: "删除应用失败" }
+  deactivate AppLogic
+  deactivate API
+  return
+end
+
+AppLogic -> AppLogic : 记录日志：应用已软删除
+
+AppLogic --> API : DeleteApplicationResp {}
+deactivate AppLogic
+
+API --> User : 200 OK\n{ code: 0, msg: "请求成功" }
+deactivate API
+
+note right
+  软删除说明：
+  1. 应用状态更新为 -1（已删除）
+  2. Token 立即失效，不能再用于推送
+  3. Messages 表数据不受影响
+  4. 前端查询时过滤 status != -1 的记录
+  5. 历史消息仍可正常查看
+end note
+
+@enduml

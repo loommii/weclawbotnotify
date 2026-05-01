@@ -69,9 +69,15 @@ state Running {
     [*] --> AppActive
 
     state AppActive
+    state AppDisabled
     state AppDeleted
 
-    AppActive --> AppDeleted : DELETE /api/application/:id
+    AppActive --> AppDisabled : PUT /api/application/:id/disable\n(禁用: status = 2)
+    AppDisabled --> AppActive : PUT /api/application/:id/enable\n(启用: status = 1)
+    AppActive --> AppDeleted : DELETE /api/application/:id\n(软删除: status = -1)
+    AppDisabled --> AppDeleted : DELETE /api/application/:id\n(软删除: status = -1)
+    AppDeleted --> AppActive : 不支持恢复
+    AppDeleted --> AppDisabled : 不支持恢复
   }
 }
 
@@ -108,6 +114,13 @@ note right of AppState
   Application = 推送应用凭证
   每个有独立 Token
   外部系统用此 Token 推送消息
+  ===
+  状态说明（Go 避免 0 值原则）：
+  - 正常(1): Token 有效，可推送
+  - 禁用(2): Token 失效，不可推送，可恢复
+  - 已删除(-1): Token 失效，不可推送，不可恢复
+  ===
+  Messages 表数据不受状态变化影响
 end note
 
 @enduml

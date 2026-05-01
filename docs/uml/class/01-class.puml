@@ -173,9 +173,20 @@ package "application (Application 服务)" <<Service>> {
     + token: string
     + name: string
     + description: string
+    + status: int
     + createdAt: time.Time
     + lastUsedAt: *time.Time
   }
+
+  note bottom of Application
+    status 状态值（Go 避免 0 值原则）：
+    1  = 正常（可查询、可推送）
+    2  = 禁用（临时停用，Token 失效，可恢复）
+    -1 = 已删除（软删除，Token 失效，不可恢复）
+    前端查询时过滤 status != -1 的记录
+    禁用应用在前端列表展示但标记
+    Messages 表数据不受软删除影响
+  end note
 
   ApplicationService --> Application : manages
   ApplicationService ..> PageResult : returns
@@ -199,8 +210,22 @@ package "message (Message 服务)" <<Service>> {
     + applicationId: int64
     + title: string
     + message: string
+    + status: int
     + date: time.Time
   }
+
+  note bottom of Message
+    status 状态码（Go 避免 0 值原则）：
+    100 = 待推送（pending）
+    200 = 推送成功（sent）
+    300 = 推送失败（failed）
+    301 = 失败-微信API错误
+    302 = 失败-超时
+    303 = 失败-Client已过期
+    304 = 失败-部分成功
+    -1  = 已删除（软删除）
+    无可用 Client 时不插入消息，直接返回错误
+  end note
 
   MessageService --> Message : manages
 }

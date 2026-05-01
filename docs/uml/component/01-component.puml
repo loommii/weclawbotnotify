@@ -200,8 +200,12 @@ database "SQLite" as DB {
     artifact "applications" as AppsTable
     note right of AppsTable
       id, user_id, token, name
-      description
+      description, status
       created_at, last_used_at
+      ===
+      status: 1=正常, 2=禁用, -1=已删除(软删除)
+      Go 避免 0 值原则
+      禁用/删除后 Token 立即失效
     end note
     artifact "messages" as MessagesTable
     note right of MessagesTable

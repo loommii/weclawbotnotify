@@ -62,6 +62,7 @@ func (l *CreateApplicationLogic) CreateApplication(req *types.CreateApplicationR
 		Token:       token,
 		Name:        req.Name,
 		Description: req.Description,
+		Status:      model.AppStatusActive,
 		CreatedAt:   time.Now().Unix(),
 	})
 	if err != nil {

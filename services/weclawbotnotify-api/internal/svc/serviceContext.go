@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 
 	"weclawbotnotify/pkg/jwtx"
-	pkgmw "weclawbotnotify/pkg/middleware"
 	"weclawbotnotify/services/ilink/ilinkclient"
 	"weclawbotnotify/services/weclawbotnotify-api/internal/config"
 	localmw "weclawbotnotify/services/weclawbotnotify-api/internal/middleware"
@@ -20,17 +19,17 @@ import (
 	"github.com/zeromicro/go-zero/zrpc"
 )
 
+// ServiceContext 服务上下文，包含所有共享依赖
 type ServiceContext struct {
-	Config             config.Config
-	UsersModel         model.UsersModel
-	RefreshTokensModel model.RefreshTokensModel
-	ApplicationsModel  model.ApplicationsModel
-	ClientsModel       model.ClientsModel
-	AccessJWTHelper    *jwtx.JWTHelper
-	RefreshJWTHelper   *jwtx.JWTHelper
-	ClientAuth         rest.Middleware
-	ApplicationAuth    rest.Middleware
-	IlinkRpc           ilinkclient.Ilink
+	Config             config.Config            // 服务配置
+	UsersModel         model.UsersModel         // 用户数据模型
+	RefreshTokensModel model.RefreshTokensModel // 刷新令牌数据模型
+	ApplicationsModel  model.ApplicationsModel  // 应用数据模型
+	ClientsModel       model.ClientsModel       // 客户端数据模型
+	AccessJWTHelper    *jwtx.JWTHelper          // Access Token 签发与验证
+	RefreshJWTHelper   *jwtx.JWTHelper          // Refresh Token 签发与验证
+	ClientAuth         rest.Middleware          // 管理后台 JWT 鉴权中间件
+	IlinkRpc           ilinkclient.Ilink        // 微信 iLink gRPC 客户端
 }
 
 func NewServiceContext(c config.Config) *ServiceContext {
@@ -49,7 +48,7 @@ func NewServiceContext(c config.Config) *ServiceContext {
 	ilinkRpcClient := ilinkclient.NewIlink(zrpc.MustNewClient(c.IlinkRpc))
 	logx.Infof("[api-svc] ilink rpc client initialized")
 
-	return &ServiceContext{
+	svcCtx := &ServiceContext{
 		Config:             c,
 		UsersModel:         usersModel,
 		RefreshTokensModel: refreshTokensModel,
@@ -57,10 +56,11 @@ func NewServiceContext(c config.Config) *ServiceContext {
 		ClientsModel:       clientsModel,
 		AccessJWTHelper:    accessJWTHelper,
 		RefreshJWTHelper:   refreshJWTHelper,
-		ClientAuth:         pkgmw.NewJWTMiddleware(publicKeyPEM).Handle,
-		ApplicationAuth:    localmw.NewApplicationAuthMiddleware().Handle,
+		ClientAuth:         localmw.NewClientAuthMiddleware(publicKeyPEM).Handle,
 		IlinkRpc:           ilinkRpcClient,
 	}
+
+	return svcCtx
 }
 
 func initDB(dataSource string) sqlx.SqlConn {

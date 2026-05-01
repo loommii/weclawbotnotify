@@ -49,6 +49,7 @@ type CreateClientResp struct {
 }
 
 type CreateMessageReq struct {
+	AppToken string `json:"app_token"`         // 应用 Token（用于推送鉴权）
 	Title    string `json:"title,optional"`    // 消息标题
 	Message  string `json:"message"`           // 消息内容
 	Priority int32  `json:"priority,optional"` // 优先级

@@ -173,6 +173,7 @@ type (
 type (
 	// CreateMessageReq 创建消息请求（推送通知）
 	CreateMessageReq {
+		AppToken string `json:"app_token"` // 应用 Token（用于推送鉴权）
 		Title    string `json:"title,optional"` // 消息标题
 		Message  string `json:"message"` // 消息内容
 		Priority int32  `json:"priority,optional"` // 优先级
@@ -298,12 +299,11 @@ service weclawbotnotify-api {
 	delete /:id (DeleteMessageReq) returns (DeleteMessageResp)
 }
 
-// 推送 API（ApplicationAuth 鉴权 - 外部系统推送通知）
+// 推送 API（外部系统推送通知，app_token 在 body 中传递）
 @server (
-	prefix:     /api/message
-	group:      message
-	middleware: ApplicationAuth
-	tags:       "消息推送"
+	prefix: /api/message
+	group:  message
+	tags:   "消息推送"
 )
 service weclawbotnotify-api {
 	@handler CreateMessage

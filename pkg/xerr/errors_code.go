@@ -50,6 +50,18 @@ var (
 	ApplicationNoPermission   = NewCodeError(110505, "无权操作该应用")
 	ApplicationQueryFailed    = NewCodeError(110506, "查询应用失败")
 	ApplicationDeleteFailed   = NewCodeError(110507, "删除应用失败")
+	ApplicationTokenInvalid   = NewCodeError(110508, "应用Token无效或已失效")
+)
+
+// Message 管理错误 1106XX
+var (
+	MessageNoClientAvailable = NewCodeError(110601, "无可用推送终端")
+	MessageInsertFailed      = NewCodeError(110602, "创建消息失败")
+	MessageQueryFailed       = NewCodeError(110603, "查询消息失败")
+	MessageDeleteFailed      = NewCodeError(110604, "删除消息失败")
+	MessageNotFound          = NewCodeError(110605, "消息不存在")
+	MessageNoPermission      = NewCodeError(110606, "无权操作该消息")
+	MessagePushFailed        = NewCodeError(110607, "推送消息失败")
 )
 
 // 第三方错误 20XXXX

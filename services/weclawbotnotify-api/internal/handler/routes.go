@@ -123,16 +123,13 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 	)
 
 	server.AddRoutes(
-		rest.WithMiddlewares(
-			[]rest.Middleware{serverCtx.ApplicationAuth},
-			[]rest.Route{
-				{
-					Method:  http.MethodPost,
-					Path:    "/push",
-					Handler: message.CreateMessageHandler(serverCtx),
-				},
-			}...,
-		),
+		[]rest.Route{
+			{
+				Method:  http.MethodPost,
+				Path:    "/push",
+				Handler: message.CreateMessageHandler(serverCtx),
+			},
+		},
 		rest.WithPrefix("/api/message"),
 	)
 

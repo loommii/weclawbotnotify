@@ -3,20 +3,22 @@
 
 package middleware
 
-import "net/http"
+import (
+	"net/http"
+
+	pkgmw "weclawbotnotify/pkg/middleware"
+)
 
 type ClientAuthMiddleware struct {
+	jwtMiddleware *pkgmw.JWTMiddleware
 }
 
-func NewClientAuthMiddleware() *ClientAuthMiddleware {
-	return &ClientAuthMiddleware{}
+func NewClientAuthMiddleware(publicKeyPEM []byte) *ClientAuthMiddleware {
+	return &ClientAuthMiddleware{
+		jwtMiddleware: pkgmw.NewJWTMiddleware(publicKeyPEM),
+	}
 }
 
 func (m *ClientAuthMiddleware) Handle(next http.HandlerFunc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		// TODO generate middleware implement function, delete after code implementation
-
-		// Passthrough to next handler if need
-		next(w, r)
-	}
+	return m.jwtMiddleware.Handle(next)
 }

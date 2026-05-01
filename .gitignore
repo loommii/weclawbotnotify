@@ -1,3 +1,6 @@
+# 独立测试 module（不纳入版本控制）
+demo/
+
 # 日志文件
 logs/
 *.log
